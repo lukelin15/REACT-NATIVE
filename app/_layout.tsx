@@ -5,6 +5,7 @@ import Index from './index';
 import About from './About';
 import Chat from './Chat';
 import PushToTalk from './PushToTalk';
+import Map from './map';
 
 const Tab = createBottomTabNavigator();
 
@@ -23,6 +24,8 @@ export default function RootLayout() {
             iconName = 'chatbubbles';
           } else if (route.name === 'Talk') {
             iconName = 'mic';
+          } else if (route.name === 'Map') {
+            iconName = 'map';
           }
 
           // You can return any component that you like here!
@@ -45,6 +48,7 @@ export default function RootLayout() {
       <Tab.Screen name="About" component={About} />
       <Tab.Screen name="Chat" component={Chat} />
       <Tab.Screen name="Talk" component={PushToTalk} />
+      <Tab.Screen name="Map" component={Map} />
     </Tab.Navigator>
   );
 }
