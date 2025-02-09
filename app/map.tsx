@@ -35,7 +35,7 @@ const StreetViewScreen = () => {
         }
       </style>
       <script
-        src="https://maps.googleapis.com/maps/api/js?key=API_KEY&callback=initMap"
+        src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBln4Zd0pJd6AkW3ADYabEffS_VIau3waA&callback=initMap"
         async
         defer
       ></script>
