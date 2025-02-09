@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, Button, StyleSheet, Image } from 'react-native';
+import { View, Text, Pressable, StyleSheet, Image } from 'react-native';
 
 export default function PushToTalk() {
   const [isListening, setIsListening] = useState(false);
@@ -21,12 +21,18 @@ export default function PushToTalk() {
       <Text style={styles.description}>
         Press and hold the button below to talk to the AI. Release the button to send your message.
       </Text>
-      <Button
-        title={isListening ? "Listening..." : "Hold to Talk"}
+      <Pressable
         onPressIn={handlePressIn}
         onPressOut={handlePressOut}
-        color="#4CAF50"
-      />
+        style={({ pressed }) => [
+          styles.button,
+          { backgroundColor: pressed ? '#45a049' : '#4CAF50' },
+        ]}
+      >
+        <Text style={styles.buttonText}>
+          {isListening ? 'Listening...' : 'Hold to Talk'}
+        </Text>
+      </Pressable>
     </View>
   );
 }
@@ -56,5 +62,15 @@ const styles = StyleSheet.create({
     textAlign: "center",
     marginBottom: 20,
     color: "#555",
+  },
+  button: {
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 5,
+  },
+  buttonText: {
+    fontSize: 16,
+    color: "white",
+    textAlign: "center",
   },
 });
