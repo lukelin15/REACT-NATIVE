@@ -14,6 +14,7 @@ import About from './About';
 import PushToTalk from './PushToTalk';
 import Map from './map';
 import { auth } from '@/lib/firebase'; 
+import Onboarding from './onboarding';
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -64,9 +65,14 @@ export default function RootLayout() {
           {() => <SignIn onLogin={() => setIsLoggedIn(true)} />}
         </Stack.Screen>
         <Stack.Screen name="SignUp">
-          {() => <SignUp onSignUp={() => setIsLoggedIn(true)} />}
-        </Stack.Screen>
-      </Stack.Navigator>
+        {() => <SignUp onSignUp={() => setIsLoggedIn(true)} />}
+      </Stack.Screen>
+      <Stack.Screen
+        name="Onboarding"
+        component={Onboarding}
+        options={{ headerShown: false }}
+      />
+    </Stack.Navigator>
     );
   }
 
@@ -87,7 +93,7 @@ export default function RootLayout() {
           } else if (route.name === 'Map') {
               iconName = 'map';
           }
-          
+
           // You can return any component that you like here!
           return <Ionicons name={iconName} size={size} color={color} />;
         },

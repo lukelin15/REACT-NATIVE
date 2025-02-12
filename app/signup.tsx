@@ -9,6 +9,7 @@ import { setDoc, doc } from 'firebase/firestore';
 type RootStackParamList = {
   SignIn: undefined;
   SignUp: undefined;
+  Onboarding: { uid: string };
 };
 
 type SignUpScreenNavigationProp = StackNavigationProp<RootStackParamList, 'SignUp'>;
@@ -25,6 +26,7 @@ export default function SignUp({ onSignUp }: SignUpProps) {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState<string>('');
+
 
   const handleSignUp = async () => {
     if (password !== confirmPassword) {
@@ -46,7 +48,10 @@ export default function SignUp({ onSignUp }: SignUpProps) {
       await setDoc(doc(db, 'users', user.uid, 'AllAboutUser', 'profile'), dataToSave);
 
       console.log('User signed up successfully!');
-      onSignUp();
+      console.log('Navigating to Onboarding...');
+
+      navigation.replace('Onboarding', { uid: user.uid });
+
     } catch (error: any) {
       setError(error.message);
     }
