@@ -9,7 +9,7 @@ import { setDoc, doc } from 'firebase/firestore';
 type RootStackParamList = {
   SignIn: undefined;
   SignUp: undefined;
-  Onboarding: { uid: string };
+  Onboarding: undefined;
 };
 
 type SignUpScreenNavigationProp = StackNavigationProp<RootStackParamList, 'SignUp'>;
@@ -27,31 +27,27 @@ export default function SignUp({ onSignUp }: SignUpProps) {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState<string>('');
 
-
   const handleSignUp = async () => {
     if (password !== confirmPassword) {
       setError('Passwords do not match!');
       return;
     }
-
+  
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
-
+  
       const dataToSave = {
         firstName,
         lastName,
         email,
         firstSignUp: new Date(),
+        onboardingCompleted: false // Add this flag
       };
-
+  
       await setDoc(doc(db, 'users', user.uid, 'AllAboutUser', 'profile'), dataToSave);
-
       console.log('User signed up successfully!');
-      console.log('Navigating to Onboarding...');
-
-      navigation.replace('Onboarding', { uid: user.uid });
-
+      navigation.replace('Onboarding'); // Use replace instead of navigate
     } catch (error: any) {
       setError(error.message);
     }
@@ -104,6 +100,14 @@ export default function SignUp({ onSignUp }: SignUpProps) {
 
         <TouchableOpacity style={styles.signUpButton} onPress={handleSignUp}>
           <Text style={styles.signUpButtonText}>Sign Up</Text>
+        </TouchableOpacity>
+
+        {/* Add test button */}
+        <TouchableOpacity 
+          style={[styles.signUpButton, { backgroundColor: '#ff9800' }]} 
+          onPress={() => navigation.navigate('Onboarding')}
+        >
+          <Text style={styles.signUpButtonText}>Test Onboarding</Text>
         </TouchableOpacity>
 
         <View style={styles.footerContainer}>

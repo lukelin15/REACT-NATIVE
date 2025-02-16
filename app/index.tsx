@@ -9,6 +9,8 @@ import { Ionicons } from '@expo/vector-icons';
 type RootStackParamList = {
   Index: undefined;
   ItemsYouMightNeed: undefined;
+  Onboarding: undefined;
+  SignUp: undefined;
 };
 
 type IndexNavigationProp = StackNavigationProp<RootStackParamList, 'Index'>;
