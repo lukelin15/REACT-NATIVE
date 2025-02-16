@@ -102,14 +102,6 @@ export default function SignUp({ onSignUp }: SignUpProps) {
           <Text style={styles.signUpButtonText}>Sign Up</Text>
         </TouchableOpacity>
 
-        {/* Add test button */}
-        <TouchableOpacity 
-          style={[styles.signUpButton, { backgroundColor: '#ff9800' }]} 
-          onPress={() => navigation.navigate('Onboarding')}
-        >
-          <Text style={styles.signUpButtonText}>Test Onboarding</Text>
-        </TouchableOpacity>
-
         <View style={styles.footerContainer}>
           <Text style={styles.footerText}>Already have an account? </Text>
           <TouchableOpacity onPress={() => navigation.navigate('SignIn')}>
