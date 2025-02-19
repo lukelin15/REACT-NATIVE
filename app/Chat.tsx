@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert, ActivityIndicator } from 'react-native';
 import { auth } from '@/lib/firebase';
 
 export default function Chat() {
@@ -7,21 +7,30 @@ export default function Chat() {
     { sender: "Bot", text: "Hi! How can I help you today?" }
   ]);
   const [input, setInput] = useState("");
+  const [shoppingList, setShoppingList] = useState(null);
+  const [loadingList, setLoadingList] = useState(false); 
   const scrollViewRef = useRef<ScrollView | null>(null);
 
   const sendMessageToBackend = async (userMessage: string) => {
     try {
       const user = auth.currentUser;
-      if (!user) return;
+      if (!user) {
+        Alert.alert("Authentication Error", "You must be logged in to chat.");
+        return "You need to sign in first.";
+      }
 
       const token = await user.getIdToken();
-      const response = await fetch("http://localhost:8000/chat", {
+      const uid = user.uid;
+
+      const BACKEND_URL = "http://localhost:8002/chat"; // Use actual backend IP if needed
+
+      const response = await fetch(BACKEND_URL, {
         method: "POST",
         headers: {
           "Authorization": `Bearer ${token}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ message: userMessage }),
+        body: JSON.stringify({ uid, message: userMessage }),
       });
 
       if (!response.ok) {
@@ -54,6 +63,43 @@ export default function Chat() {
     }
   };
 
+  const generateShoppingList = async () => {
+    try {
+      setLoadingList(true); // Show loading indicator
+
+      const user = auth.currentUser;
+      if (!user) {
+        Alert.alert("Authentication Error", "You must be logged in to generate a shopping list.");
+        setLoadingList(false);
+        return;
+      }
+
+      const token = await user.getIdToken();
+      const uid = user.uid;
+      const BACKEND_URL = `http://localhost:8002/generate-shopping-list/${uid}`;
+
+      const response = await fetch(BACKEND_URL, {
+        method: "GET",
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch shopping list.");
+      }
+
+      const data = await response.json();
+      setShoppingList(data);
+    } catch (error) {
+      console.error("Error generating shopping list:", error);
+      Alert.alert("Error", "Failed to generate shopping list. Please try again.");
+    } finally {
+      setLoadingList(false);
+    }
+  };
+
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Chat</Text>
@@ -68,6 +114,32 @@ export default function Chat() {
           </View>
         ))}
       </ScrollView>
+
+      {/* Generate Shopping List Button */}
+      <TouchableOpacity onPress={generateShoppingList} style={styles.generateButton}>
+        <Text style={styles.generateButtonText}>Generate Shopping List</Text>
+      </TouchableOpacity>
+
+      {/* Loading Indicator */}
+      {loadingList && <ActivityIndicator size="large" color="#2E8B57" style={{ marginTop: 10 }} />}
+
+      {/* Display Shopping List */}
+      {shoppingList && (
+        <View style={styles.shoppingListContainer}>
+          <Text style={styles.listTitle}>Shopping List</Text>
+          <Text style={styles.listSubtitle}>Locations:</Text>
+          {shoppingList.locations.map((location, index) => (
+            <Text key={index} style={styles.listItem}>- {location}</Text>
+          ))}
+          <Text style={styles.listSubtitle}>Items:</Text>
+          {shoppingList.items.map((item, index) => (
+            <Text key={index} style={styles.listItem}>
+              {item.name} - ${item.price.toFixed(2)} ({item.location})
+            </Text>
+          ))}
+        </View>
+      )}
+
       <View style={styles.inputContainer}>
         <TextInput
           style={styles.input}
@@ -119,6 +191,41 @@ const styles = StyleSheet.create({
     fontSize: 16,
     lineHeight: 22,
   },
+  generateButton: {
+    backgroundColor: "#FFA500",
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  generateButtonText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  shoppingListContainer: {
+    backgroundColor: "#fff",
+    padding: 15,
+    borderRadius: 10,
+    marginVertical: 10,
+  },
+  listTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    marginBottom: 5,
+    color: "#2E8B57",
+  },
+  listSubtitle: {
+    fontSize: 16,
+    fontWeight: "bold",
+    marginTop: 5,
+  },
+  listItem: {
+    fontSize: 14,
+    marginVertical: 2,
+  },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -148,3 +255,4 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
 });
+
