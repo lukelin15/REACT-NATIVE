@@ -13,6 +13,7 @@ import Profile from './Profile';
 import About from './About';
 import PushToTalk from './PushToTalk';
 import Onboarding from './Onboarding';
+import Route from './Route';
 import { auth, db } from '@/lib/firebase'; 
 import { doc, getDoc } from 'firebase/firestore';
 
@@ -77,7 +78,7 @@ export default function RootLayout() {
     <Tab.Navigator
       screenOptions={({ route }) => ({
         tabBarIcon: ({ color, size }) => {
-          let iconName: "home" | "information-circle" | "person-circle" | "chatbubbles" | "mic" = "home";
+          let iconName: "home" | "information-circle" | "person-circle" | "chatbubbles" |'map'| "mic" = "home";
   
           switch (route.name) {
             case 'Home':
@@ -94,6 +95,9 @@ export default function RootLayout() {
               break;
             case 'Profile':
               iconName = 'person-circle';
+              break;
+            case 'Route':
+              iconName = 'map';
               break;
           }
   
@@ -121,6 +125,8 @@ export default function RootLayout() {
       <Tab.Screen name="Talk" component={PushToTalk} />
       <Tab.Screen name="Profile" component={Profile}/>
       <Tab.Screen name="About" component={About} />
+      <Tab.Screen name="Route" component={Route} />
+
     </Tab.Navigator>
   );
   
