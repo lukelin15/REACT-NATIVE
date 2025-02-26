@@ -3,9 +3,7 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert,
 import { auth } from '@/lib/firebase';
 
 export default function Chat() {
-  const [messages, setMessages] = useState([
-    { sender: "Bot", text: "Hi! How can I help you today?" }
-  ]);
+  const [messages, setMessages] = useState([{ sender: "Bot", text: "Hi! How can I help you today?" }]);
   const [input, setInput] = useState("");
   const [shoppingList, setShoppingList] = useState(null);
   const [loadingList, setLoadingList] = useState(false);
@@ -23,21 +21,14 @@ export default function Chat() {
       const token = await user.getIdToken();
       const uid = user.uid;
 
-      const BACKEND_URL = "http://localhost:8002/chat"; // Replace with actual backend URL
-
-      const response = await fetch(BACKEND_URL, {
+      const response = await fetch("http://localhost:8002/chat", {
         method: "POST",
-        headers: {
-          "Authorization": `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
+        headers: { "Authorization": `Bearer ${token}`, "Content-Type": "application/json" },
         body: JSON.stringify({ uid, message: userMessage }),
       });
 
-      if (!response.ok) {
-        throw new Error("Failed to fetch response from AI.");
-      }
-
+      if (!response.ok) throw new Error("Failed to fetch response from AI.");
+      
       const data = await response.json();
       return data.ai_response;
     } catch (error) {
@@ -49,17 +40,10 @@ export default function Chat() {
 
   const handleSend = async () => {
     if (input.trim()) {
-      const userMessage = { sender: "User", text: input };
-      setMessages(prevMessages => [...prevMessages, userMessage]);
-
-      setInput(""); // Clear input field immediately after sending
-
+      setMessages(prev => [...prev, { sender: "User", text: input }]);
+      setInput("");
       const botResponse = await sendMessageToBackend(input);
-      const botMessage = { sender: "Bot", text: botResponse };
-
-      setMessages(prevMessages => [...prevMessages, botMessage]);
-
-      // Ensure the scroll view goes to the latest message
+      setMessages(prev => [...prev, { sender: "Bot", text: botResponse }]);
       setTimeout(() => scrollViewRef.current?.scrollToEnd({ animated: true }), 100);
     }
   };
@@ -67,11 +51,11 @@ export default function Chat() {
   const generateShoppingList = async () => {
     try {
       setLoadingList(true);
-      setModalVisible(true); // Open modal when button is clicked
+      setModalVisible(true);
 
       const user = auth.currentUser;
       if (!user) {
-        Alert.alert("Authentication Error", "You must be logged in to generate a shopping list.");
+        Alert.alert("Authentication Error", "You must be logged in.");
         setLoadingList(false);
         setModalVisible(false);
         return;
@@ -79,19 +63,13 @@ export default function Chat() {
 
       const token = await user.getIdToken();
       const uid = user.uid;
-      const BACKEND_URL = `http://localhost:8002/generate-shopping-list/${uid}`;
 
-      const response = await fetch(BACKEND_URL, {
+      const response = await fetch(`http://localhost:8002/generate-shopping-list/${uid}`, {
         method: "GET",
-        headers: {
-          "Authorization": `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
+        headers: { "Authorization": `Bearer ${token}`, "Content-Type": "application/json" },
       });
 
-      if (!response.ok) {
-        throw new Error("Failed to fetch shopping list.");
-      }
+      if (!response.ok) throw new Error("Failed to fetch shopping list.");
 
       const data = await response.json();
       setShoppingList(data);
@@ -103,14 +81,75 @@ export default function Chat() {
     }
   };
 
+  const addItemToShoppingList = async () => {
+    try {
+      const user = auth.currentUser;
+      if (!user) {
+        Alert.alert("Authentication Error", "You must be logged in.");
+        return;
+      }
+  
+      const token = await user.getIdToken();
+      const uid = user.uid;
+      const newItem = { name: "Eggs", price: 4.99, location: "Costco" };
+  
+      const response = await fetch(`http://localhost:8002/shopping-list/${uid}/add-item`, {
+        method: "POST",
+        headers: { "Authorization": `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify(newItem),
+      });
+  
+      if (!response.ok) throw new Error("Failed to add item.");
+  
+      // Append new item instead of replacing shopping list
+      setShoppingList(prevList => ({
+        ...prevList,
+        items: [...(prevList?.items || []), newItem] // Preserve old items
+      }));
+  
+      Alert.alert("Success", `Item '${newItem.name}' added successfully`);
+    } catch (error) {
+      console.error("Failed to add item", error);
+      Alert.alert("Error", "Failed to add item.");
+    }
+  };
+  
+  const deleteItemFromShoppingList = async (itemName: string) => {
+    try {
+      const user = auth.currentUser;
+      if (!user) {
+        Alert.alert("Authentication Error", "You must be logged in.");
+        return;
+      }
+
+      const token = await user.getIdToken();
+      const uid = user.uid;
+
+      const response = await fetch(`http://localhost:8002/shopping-list/${uid}/delete-item/${encodeURIComponent(itemName)}`, {
+        method: "DELETE",
+        headers: { "Authorization": `Bearer ${token}`, "Content-Type": "application/json" },
+      });
+
+      if (!response.ok) throw new Error("Failed to delete item.");
+
+      // Remove only the selected item from the frontend state
+      setShoppingList(prevList => ({
+        ...prevList,
+        items: prevList.items.filter(item => item.name !== itemName)
+      }));
+
+      Alert.alert("Success", `Item '${itemName}' removed successfully`);
+    } catch (error) {
+      console.error("Failed to delete item", error);
+      Alert.alert("Error", "Failed to delete item.");
+    }
+  };
+
+
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Chat</Text>
-      <ScrollView
-        style={styles.chatContainer}
-        ref={scrollViewRef}
-        onContentSizeChange={() => scrollViewRef.current?.scrollToEnd({ animated: true })}
-      >
+      <ScrollView style={styles.chatContainer} ref={scrollViewRef} onContentSizeChange={() => scrollViewRef.current?.scrollToEnd({ animated: true })}>
         {messages.map((message, index) => (
           <View key={index} style={[styles.messageBubble, message.sender === "User" ? styles.userMessage : styles.botMessage]}>
             <Text style={styles.messageText}>{message.text}</Text>
@@ -118,22 +157,14 @@ export default function Chat() {
         ))}
       </ScrollView>
 
-      {/* Generate Shopping List Button */}
       <TouchableOpacity onPress={generateShoppingList} style={styles.generateButton}>
         <Text style={styles.generateButtonText}>Generate Shopping List</Text>
       </TouchableOpacity>
 
-      {/* Shopping List Modal */}
-      <Modal
-        visible={modalVisible}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => setModalVisible(false)}
-      >
+      <Modal visible={modalVisible} animationType="slide" transparent onRequestClose={() => setModalVisible(false)}>
         <View style={styles.modalContainer}>
           <View style={styles.modalContent}>
             <Text style={styles.listTitle}>Shopping List</Text>
-
             {loadingList ? (
               <ActivityIndicator size="large" color="#2E8B57" />
             ) : (
@@ -144,12 +175,21 @@ export default function Chat() {
                 ))}
                 <Text style={styles.listSubtitle}>Items:</Text>
                 {shoppingList?.items.map((item, index) => (
-                  <Text key={index} style={styles.listItem}>
-                    {item.name} - ${item.price.toFixed(2)} ({item.location})
-                  </Text>
+                  <View key={index} style={styles.listItemContainer}>
+                    <Text style={styles.listItemText}>
+                      {item.name} - ${item.price.toFixed(2)} ({item.location})
+                    </Text>
+                    <TouchableOpacity onPress={() => deleteItemFromShoppingList(item.name)} style={styles.deleteButton}>
+                      <Text style={styles.deleteButtonText}>✕</Text>
+                    </TouchableOpacity>
+                  </View>
                 ))}
               </>
             )}
+
+            <TouchableOpacity onPress={addItemToShoppingList} style={styles.addButton}>
+              <Text style={styles.addButtonText}>Add Item</Text>
+            </TouchableOpacity>
 
             <TouchableOpacity onPress={() => setModalVisible(false)} style={styles.closeButton}>
               <Text style={styles.closeButtonText}>Close</Text>
@@ -159,12 +199,7 @@ export default function Chat() {
       </Modal>
 
       <View style={styles.inputContainer}>
-        <TextInput
-          style={styles.input}
-          placeholder="Type your message..."
-          value={input}
-          onChangeText={setInput}
-        />
+        <TextInput style={styles.input} placeholder="Type your message..." value={input} onChangeText={setInput} />
         <TouchableOpacity onPress={handleSend} style={styles.sendButton}>
           <Text style={styles.sendButtonText}>Send</Text>
         </TouchableOpacity>
@@ -186,12 +221,16 @@ const styles = StyleSheet.create({
   modalContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: "rgba(0,0,0,0.5)" },
   modalContent: { backgroundColor: "#fff", padding: 20, borderRadius: 10, width: '80%' },
   listTitle: { fontSize: 18, fontWeight: "bold", marginBottom: 10 },
-  listSubtitle: { fontSize: 16, fontWeight: "bold", marginTop: 5 },
-  listItem: { fontSize: 14, marginVertical: 2 },
-  closeButton: { marginTop: 15, backgroundColor: "#2E8B57", padding: 10, borderRadius: 10, alignItems: 'center' },
-  closeButtonText: { color: "#fff", fontSize: 16 },
+  listItem: { fontSize: 16, marginBottom: 5 },
+  listItemContainer: { flexDirection: 'row', alignItems: 'center', marginBottom: 10, position: 'relative' },
+  itemInput: { flex: 1, backgroundColor: "#fff", padding: 10, borderRadius: 10, borderWidth: 1, borderColor: "#2E8B57", marginHorizontal: 5 },
+  removeButton: { position: 'absolute', left: -30, backgroundColor: "#FF4C4C", padding: 8, borderRadius: 50, width: 30, height: 30, justifyContent: "center", alignItems: "center" },
+  removeButtonText: { color: "#fff", fontSize: 18, fontWeight: "bold" },
   inputContainer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   input: { height: 45, width: '85%', borderRadius: 30, backgroundColor: "#fff", paddingHorizontal: 15, borderColor: '#2E8B57', borderWidth: 1, fontSize: 16 },
   sendButton: { backgroundColor: "#2E8B57", paddingVertical: 10, paddingHorizontal: 16, borderRadius: 20 },
   sendButtonText: { color: "#fff", fontSize: 16, fontWeight: 'bold' },
+  addButton: { backgroundColor: "#2E8B57", padding: 12, borderRadius: 20, alignItems: 'center', marginTop: 10 },
+  addButtonText: { color: "#fff", fontSize: 16, fontWeight: 'bold' },
 });
+
