@@ -32,7 +32,7 @@ export default function MainPage() {
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
 
   const initialPosition: Position = { x: 0, y: height - 100 }; // Initial position at the bottom
-  const halfHeightPosition: Position = { x: 0, y: height / 2 - 10 }; // Position halfway up the screen
+  const halfHeightPosition: Position = { x: 0, y: height * 0.4 }; // Position halfway up the screen
   const position = useRef(new Animated.ValueXY(initialPosition)).current;
   const titlePosition = useRef(new Animated.Value(0)).current; // To animate title position
 
@@ -50,6 +50,10 @@ export default function MainPage() {
     onPanResponderTerminationRequest: () => false,
     onPanResponderMove: (evt, gestureState) => {
       let newY = gestureState.dy/2;
+
+      if (toTop && newY > 0 && isVisible) {
+        setIsVisible(false);
+      }
 
       // Prevent dragging up if it's already at the top
       if (toTop && newY < 0) return;
@@ -72,32 +76,39 @@ export default function MainPage() {
 
   // Snaps the view to halfway up the screen and makes content visible
   const snapToHalfway = () => {
-    Animated.timing(position, {
-      toValue: halfHeightPosition,
-      duration: 300,
-      useNativeDriver: false,
-    }).start(() => {
-      setToTop(true); // Mark as halfway up
-      setIsVisible(true); // Show the content
+    Animated.parallel([
+      Animated.timing(position, {
+        toValue: halfHeightPosition,
+        duration: 300,
+        useNativeDriver: false,
+      }),
+      Animated.timing(titlePosition, {
+        toValue: -Dimensions.get('window').height * 0.25,
+        duration: 300,
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      setToTop(true);
+      setIsVisible(true);
     });
   };
 
   // Snaps the view back to the bottom and hides the content
   const snapToBottom = (initialPosition: Position) => {
-    Animated.timing(position, {
-      toValue: initialPosition,
-      duration: 150,
-      useNativeDriver: false,
-    }).start(() => {
-      setToTop(false); // Mark as at the bottom
-      setIsVisible(false); // Hide the content
+    Animated.parallel([
+      Animated.timing(position, {
+        toValue: initialPosition,
+        duration: 150,
+        useNativeDriver: false,
+      }),
+      Animated.timing(titlePosition, {
+        toValue: 0,
+        duration: 150,
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      setToTop(false);
     });
-
-    Animated.timing(titlePosition, {
-      toValue: 0, // Center the title
-      duration: 300,
-      useNativeDriver: true,
-    }).start();
   };
 
   // Close button action
@@ -119,7 +130,7 @@ export default function MainPage() {
       <Animated.Text
         style={[styles.title, { transform: [{ translateY: titlePosition }] }]}
       >
-        Groceries Shopping List
+        SmartCart
       </Animated.Text>
 
       <Animated.View
@@ -133,27 +144,29 @@ export default function MainPage() {
           <ScrollView style={styles.scroll}>
             <Text style={styles.welcome}>Welcome</Text>
             <Text style={styles.lorem}>
-              Welcome to our Grocery Shopping List Recommendation System! This app helps you optimize your grocery shopping by providing recommendations based on your shopping list.
+              Welcome to SmartCart, our Grocery Shopping List Recommendation System! This app helps you optimize your grocery shopping by providing recommendations based on your shopping list.
             </Text>
-
-            {/* Buttons for SignIn and Sign Up */}
-            <View style={styles.buttonsContainer}>
-              <TouchableOpacity
-                style={styles.SignInButton}
-                onPress={navigateToSignIn}
-              >
-                <Text style={styles.SignInText}>Sign In</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.signUpButton}
-                onPress={navigateToSignUp}
-              >
-                <Text style={styles.signUpText}>Sign Up</Text>
-              </TouchableOpacity>
-            </View>
           </ScrollView>
         )}
       </Animated.View>
+
+      {/* Conditionally render buttons only after drag up */}
+      {isVisible && (
+        <View style={styles.buttonsContainer}>
+          <TouchableOpacity
+            style={styles.SignInButton}
+            onPress={navigateToSignIn}
+          >
+            <Text style={styles.SignInText}>Sign In</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.signUpButton}
+            onPress={navigateToSignUp}
+          >
+            <Text style={styles.signUpText}>Sign Up</Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
       {/* Tip text at the bottom */}
       {!isVisible && <Text style={styles.tip}>Drag up!</Text>}
@@ -197,18 +210,26 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   welcome: {
-    fontSize: 30,
-    fontWeight: 'bold',
-    marginVertical: 10,
+    fontSize: 34,
+    fontWeight: '700',
+    textAlign: 'center',
+    marginVertical: 20,
+    color: '#fff', 
   },
   lorem: {
     fontSize: 20,
-    marginBottom: 70,
+    color: '#fff',
+    lineHeight: 28,
+    marginBottom: 20,
+    textAlign: 'center',
   },
   buttonsContainer: {
     flexDirection: 'row',
+    position: 'absolute',
+    bottom: 40,
+    left: 20,
+    right: 20,
     justifyContent: 'space-between',
-    width: '100%',
     paddingHorizontal: 20,
   },
   SignInButton: {
@@ -238,8 +259,9 @@ const styles = StyleSheet.create({
   },
   tip: {
     position: 'absolute',
-    bottom: 20,
-    fontSize: 16,
+    bottom: 30,
+    fontSize: 18,
     color: '#fff',
+    fontWeight: 'bold',
   },
 });

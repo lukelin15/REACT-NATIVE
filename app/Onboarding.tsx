@@ -102,13 +102,6 @@ export default function Onboarding({ setIsLoggedIn }: OnboardingProps) {
         </Text>
       </View>
 
-      {/* Display User Location */}
-      {location && (
-        <Text style={styles.locationText}>
-          📍 Your Location: {location.latitude}, {location.longitude}
-        </Text>
-      )}
-
       {/* Dietary Preferences Section */}
       <Text style={styles.sectionTitle}>Dietary Preferences</Text>
       <View style={styles.buttonContainer}>

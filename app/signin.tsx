@@ -5,6 +5,7 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import { auth } from '@/lib/firebase';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 
+
 type RootStackParamList = {
   SignUp: undefined;
   SignIn: undefined;

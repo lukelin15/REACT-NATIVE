@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert, ActivityIndicator, Modal } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert, ActivityIndicator, Modal, KeyboardAvoidingView,Platform } from 'react-native';
 import { auth } from '@/lib/firebase';
 
 export default function Chat() {
@@ -147,8 +147,12 @@ export default function Chat() {
 
 
   return (
+    <KeyboardAvoidingView
+    style={styles.container}
+    behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    keyboardVerticalOffset={Platform.select({ ios: 90, android: 90 })}
+  >
     <View style={styles.container}>
-      <Text style={styles.title}>Chat</Text>
       <ScrollView style={styles.chatContainer} ref={scrollViewRef} onContentSizeChange={() => scrollViewRef.current?.scrollToEnd({ animated: true })}>
         {messages.map((message, index) => (
           <View key={index} style={[styles.messageBubble, message.sender === "User" ? styles.userMessage : styles.botMessage]}>
@@ -205,11 +209,12 @@ export default function Chat() {
         </TouchableOpacity>
       </View>
     </View>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 20, backgroundColor: "#f7f7f7" },
+  container: { flex: 1, padding: 10, backgroundColor: "#f7f7f7" },
   title: { fontSize: 20, fontWeight: 'bold', color: "#2E8B57", marginBottom: 10, textAlign: 'center' },
   chatContainer: { flex: 1, marginBottom: 20 },
   messageBubble: { padding: 12, marginVertical: 8, maxWidth: '75%', borderRadius: 20, marginHorizontal: 10 },
@@ -226,9 +231,9 @@ const styles = StyleSheet.create({
   itemInput: { flex: 1, backgroundColor: "#fff", padding: 10, borderRadius: 10, borderWidth: 1, borderColor: "#2E8B57", marginHorizontal: 5 },
   removeButton: { position: 'absolute', left: -30, backgroundColor: "#FF4C4C", padding: 8, borderRadius: 50, width: 30, height: 30, justifyContent: "center", alignItems: "center" },
   removeButtonText: { color: "#fff", fontSize: 18, fontWeight: "bold" },
-  inputContainer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  inputContainer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '95%' },
   input: { height: 45, width: '85%', borderRadius: 30, backgroundColor: "#fff", paddingHorizontal: 15, borderColor: '#2E8B57', borderWidth: 1, fontSize: 16 },
-  sendButton: { backgroundColor: "#2E8B57", paddingVertical: 10, paddingHorizontal: 16, borderRadius: 20 },
+  sendButton: { backgroundColor: "#2E8B57", paddingVertical: 10, paddingHorizontal: 16, borderRadius: 20, marginLeft: 8},
   sendButtonText: { color: "#fff", fontSize: 16, fontWeight: 'bold' },
   addButton: { backgroundColor: "#2E8B57", padding: 12, borderRadius: 20, alignItems: 'center', marginTop: 10 },
   addButtonText: { color: "#fff", fontSize: 16, fontWeight: 'bold' },
