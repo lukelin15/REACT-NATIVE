@@ -3,44 +3,51 @@ import {
   View,
   Text,
   TextInput,
-  Button,
+  TouchableOpacity,
   ScrollView,
   StyleSheet,
   Alert,
   Linking
 } from 'react-native';
+import { MaterialIcons } from '@expo/vector-icons';
 
-const API_KEY = 'AIzaSyBCBJGPUsnUMWOi35liRxHG3gi7zswtcKs'; 
+const API_KEY = 'AIzaSyBCBJGPUsnUMWOi35liRxHG3gi7zswtcKs';
 
 export default function RoutePlanner() {
-  const [addressesText, setAddressesText] = useState(
-    "9500 Gilman Dr, La Jolla, CA 92093\n4840 Shawline St, San Diego, CA 92111\n7330 Clairemont Mesa Blvd, San Diego, CA 92111"
-  );
-
+  const [origin, setOrigin] = useState("9500 Gilman Dr, La Jolla, CA 92093");
+  const [destination, setDestination] = useState("7330 Clairemont Mesa Blvd, San Diego, CA 92111");
+  const [waypoints, setWaypoints] = useState(["4840 Shawline St, San Diego, CA 92111"]);
   const [routeResult, setRouteResult] = useState<any>(null);
 
-  const computeOptimizedRoute = async () => {
-    const storeAddresses = addressesText
-      .split('\n')
-      .map(addr => addr.trim())
-      .filter(addr => addr.length > 0);
+  const addWaypoint = () => {
+    setWaypoints([...waypoints, ""]);
+  };
 
-    if (storeAddresses.length < 2) {
-      Alert.alert('Error', 'Please enter at least two addresses (origin and destination).');
+  const removeWaypoint = (index: number) => {
+    const newWaypoints = waypoints.filter((_, i) => i !== index);
+    setWaypoints(newWaypoints);
+  };
+
+  const updateWaypoint = (text: string, index: number) => {
+    const newWaypoints = [...waypoints];
+    newWaypoints[index] = text;
+    setWaypoints(newWaypoints);
+  };
+
+  const computeOptimizedRoute = async () => {
+    if (!origin.trim() || !destination.trim()) {
+      Alert.alert('Error', 'Please enter both origin and destination addresses.');
       return;
     }
 
-    const origin = { address: storeAddresses[0] };
-    const destination = { address: storeAddresses[storeAddresses.length - 1] };
-    const intermediates =
-      storeAddresses.length > 2
-        ? storeAddresses.slice(1, -1).map(address => ({ address }))
-        : [];
+    const storeAddresses = [origin, ...waypoints.filter(wp => wp.trim()), destination];
 
     const requestBody = {
-      origin,
-      destination,
-      intermediates,
+      origin: { address: origin },
+      destination: { address: destination },
+      intermediates: waypoints
+        .filter(wp => wp.trim())
+        .map(address => ({ address })),
       travelMode: "DRIVE",
       optimizeWaypointOrder: true,
     };
@@ -61,7 +68,6 @@ export default function RoutePlanner() {
       }
 
       const data = await response.json();
-      console.log("Optimized route data:", data);
       setRouteResult(data);
 
       if (!data.routes || data.routes.length === 0) {
@@ -71,34 +77,18 @@ export default function RoutePlanner() {
 
       const route = data.routes[0];
       const optimizedIndex = route.optimizedIntermediateWaypointIndex;
-      if (!optimizedIndex || intermediates.length === 0) {
-        console.log("No intermediate waypoints or no optimized index returned; using original addresses.");
+      
+      if (!optimizedIndex || waypoints.length === 0) {
         openMapsLink(storeAddresses);
         return;
       }
 
-      const isOutOfRange = optimizedIndex.some((idx: number) => idx < 0 || idx >= intermediates.length);
-      if (isOutOfRange) {
-        console.warn("Routes API returned an out-of-range index. Skipping reorder.");
-        openMapsLink(storeAddresses);
-        return;
-      }
-
-      const reorderedIntermediates = optimizedIndex.map((i: number) => {
-        console.log(`Mapping index ${i} to address:`, intermediates[i].address); 
-        return intermediates[i].address;
-      });
-
-      const finalAddresses = [
-        storeAddresses[0],
-        ...reorderedIntermediates,
-        storeAddresses[storeAddresses.length - 1]
-      ];
+      const filteredWaypoints = waypoints.filter(wp => wp.trim());
+      const reorderedIntermediates = optimizedIndex.map((i: number) => filteredWaypoints[i]);
+      const finalAddresses = [origin, ...reorderedIntermediates, destination];
 
       openMapsLink(finalAddresses);
-
-
-      Alert.alert("Success", "Optimized route retrieved and opened in Google Maps!");
+      Alert.alert("Success", "Optimized route opened in Google Maps!");
     } catch (error) {
       console.error('Error fetching optimized route:', error);
       Alert.alert('Error', 'Failed to fetch optimized route.');
@@ -110,66 +100,179 @@ export default function RoutePlanner() {
       Alert.alert("Error", "Not enough addresses to form a route.");
       return;
     }
-    const origin = encodeURIComponent(addresses[0]);
-    const destination = encodeURIComponent(addresses[addresses.length - 1]);
 
-    const waypointsArr = addresses.slice(1, -1);
-    const waypoints = waypointsArr.map(encodeURIComponent).join("|");
+    const encodedAddresses = addresses.map(encodeURIComponent);
+    const encodedOrigin = encodedAddresses[0];
+    const encodedDestination = encodedAddresses[encodedAddresses.length - 1];
+    const encodedWaypoints = encodedAddresses.slice(1, -1).join('|');
 
-    let url = `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}`;
-    if (waypointsArr.length > 0) {
-      url += `&waypoints=${waypoints}`;
+    let url = `https://www.google.com/maps/dir/?api=1&origin=${encodedOrigin}&destination=${encodedDestination}`;
+    if (encodedWaypoints) {
+      url += `&waypoints=${encodedWaypoints}`;
     }
-
     url += `&travelmode=driving`;
 
-    console.log("Opening maps link:", url);
     Linking.openURL(url);
   };
 
   return (
     <ScrollView style={styles.container}>
-      <Text style={styles.title}>Route Planner</Text>
-      <Text style={styles.description}>
-        Enter a list of store addresses (one per line). The first address is used as the origin, the last as the destination. 
-        We'll call the Google Routes API to optimize the waypoints, then open Google Maps with that optimized order.
-      </Text>
+      <View style={styles.header}>
+        <Text style={styles.title}>Route Planner</Text>
+        <Text style={styles.subtitle}>Optimize your shopping route</Text>
+      </View>
 
-      <TextInput
-        style={styles.textArea}
-        multiline
-        value={addressesText}
-        onChangeText={setAddressesText}
-        placeholder="Enter addresses, one per line..."
-      />
+      <View style={styles.inputSection}>
+        <View style={styles.inputGroup}>
+          <View style={styles.labelContainer}>
+            <MaterialIcons name="location-on" size={20} color="#4CAF50" />
+            <Text style={styles.label}>Starting Point</Text>
+          </View>
+          <TextInput
+            style={styles.input}
+            value={origin}
+            onChangeText={setOrigin}
+            placeholder="Enter starting address..."
+          />
+        </View>
 
-      <Button title="Compute & Open in Google Maps" onPress={computeOptimizedRoute} />
+        {waypoints.map((waypoint, index) => (
+          <View key={index} style={styles.inputGroup}>
+            <View style={styles.labelContainer}>
+              <MaterialIcons name="add-location" size={20} color="#4CAF50" />
+              <Text style={styles.label}>Stop {index + 1}</Text>
+              <TouchableOpacity 
+                onPress={() => removeWaypoint(index)}
+                style={styles.removeButton}
+              >
+                <MaterialIcons name="remove-circle-outline" size={20} color="#ff6b6b" />
+              </TouchableOpacity>
+            </View>
+            <TextInput
+              style={styles.input}
+              value={waypoint}
+              onChangeText={(text) => updateWaypoint(text, index)}
+              placeholder="Enter stop address..."
+            />
+          </View>
+        ))}
 
+        <TouchableOpacity style={styles.addButton} onPress={addWaypoint}>
+          <MaterialIcons name="add-circle-outline" size={20} color="#4CAF50" />
+          <Text style={styles.addButtonText}>Add Another Stop</Text>
+        </TouchableOpacity>
+
+        <View style={styles.inputGroup}>
+          <View style={styles.labelContainer}>
+            <MaterialIcons name="location-on" size={20} color="#4CAF50" />
+            <Text style={styles.label}>Final Destination</Text>
+          </View>
+          <TextInput
+            style={styles.input}
+            value={destination}
+            onChangeText={setDestination}
+            placeholder="Enter destination address..."
+          />
+        </View>
+      </View>
+
+      <TouchableOpacity 
+        style={styles.computeButton} 
+        onPress={computeOptimizedRoute}
+      >
+        <MaterialIcons name="map" size={24} color="#fff" />
+        <Text style={styles.computeButtonText}>Optimize & Open in Maps</Text>
+      </TouchableOpacity>
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff', padding: 20 },
-  title: { fontSize: 28, fontWeight: 'bold', color: '#4CAF50', textAlign: 'center', marginBottom: 10 },
-  description: { fontSize: 16, color: '#666', textAlign: 'center', marginBottom: 20 },
-  textArea: {
-    height: 150,
-    borderColor: '#ccc',
-    borderWidth: 1,
-    borderRadius: 10,
-    padding: 10,
-    textAlignVertical: 'top',
+  container: {
+    flex: 1,
+    backgroundColor: '#fff',
+  },
+  header: {
+    padding: 24,
+    backgroundColor: '#f8f9fa',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e9ecef',
+  },
+  title: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: '#2d3436',
+    marginBottom: 8,
+  },
+  subtitle: {
+    fontSize: 16,
+    color: '#636e72',
+  },
+  inputSection: {
+    padding: 20,
+  },
+  inputGroup: {
     marginBottom: 20,
   },
-  resultContainer: {
-    marginTop: 20,
-    padding: 10,
-    backgroundColor: '#f0f0f0',
-    borderRadius: 10,
+  labelContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
   },
-  resultTitle: { fontSize: 18, fontWeight: 'bold', marginBottom: 10 },
-  resultText: { fontSize: 14, color: '#333' },
+  label: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#2d3436',
+    marginLeft: 8,
+    flex: 1,
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: '#e9ecef',
+    borderRadius: 12,
+    padding: 12,
+    fontSize: 16,
+    backgroundColor: '#f8f9fa',
+  },
+  addButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    marginBottom: 20,
+    justifyContent: 'center',
+  },
+  addButtonText: {
+    color: '#4CAF50',
+    fontSize: 16,
+    fontWeight: '600',
+    marginLeft: 8,
+  },
+  removeButton: {
+    padding: 4,
+  },
+  computeButton: {
+    backgroundColor: '#4CAF50',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 16,
+    borderRadius: 12,
+    margin: 20,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  computeButtonText: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: '600',
+    marginLeft: 8,
+  },
 });
 
 

@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert, ActivityIndicator, Modal, KeyboardAvoidingView,Platform } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert, ActivityIndicator, Modal, KeyboardAvoidingView, Platform, SafeAreaView, Keyboard } from 'react-native';
 import { auth } from '@/lib/firebase';
 
 export default function Chat() {
@@ -147,95 +147,269 @@ export default function Chat() {
 
 
   return (
-    <KeyboardAvoidingView
-    style={styles.container}
-    behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    keyboardVerticalOffset={Platform.select({ ios: 90, android: 90 })}
-  >
-    <View style={styles.container}>
-      <ScrollView style={styles.chatContainer} ref={scrollViewRef} onContentSizeChange={() => scrollViewRef.current?.scrollToEnd({ animated: true })}>
-        {messages.map((message, index) => (
-          <View key={index} style={[styles.messageBubble, message.sender === "User" ? styles.userMessage : styles.botMessage]}>
-            <Text style={styles.messageText}>{message.text}</Text>
-          </View>
-        ))}
-      </ScrollView>
+    <SafeAreaView style={styles.safeArea}>
+      <KeyboardAvoidingView
+        style={styles.keyboardAvoidingView}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={0}
+      >
+        <View style={styles.container}>
+          <ScrollView 
+            style={styles.chatContainer} 
+            ref={scrollViewRef}
+            onContentSizeChange={() => scrollViewRef.current?.scrollToEnd({ animated: true })}
+            keyboardShouldPersistTaps="handled"
+            contentContainerStyle={styles.scrollViewContent}
+          >
+            {messages.map((message, index) => (
+              <View key={index} style={[styles.messageBubble, message.sender === "User" ? styles.userMessage : styles.botMessage]}>
+                <Text style={[styles.messageText, message.sender === "User" ? styles.userMessageText : styles.botMessageText]}>{message.text}</Text>
+              </View>
+            ))}
+          </ScrollView>
 
-      <TouchableOpacity onPress={generateShoppingList} style={styles.generateButton}>
-        <Text style={styles.generateButtonText}>Generate Shopping List</Text>
-      </TouchableOpacity>
-
-      <Modal visible={modalVisible} animationType="slide" transparent onRequestClose={() => setModalVisible(false)}>
-        <View style={styles.modalContainer}>
-          <View style={styles.modalContent}>
-            <Text style={styles.listTitle}>Shopping List</Text>
-            {loadingList ? (
-              <ActivityIndicator size="large" color="#2E8B57" />
-            ) : (
-              <>
-                <Text style={styles.listSubtitle}>Locations:</Text>
-                {shoppingList?.locations.map((location, index) => (
-                  <Text key={index} style={styles.listItem}>- {location}</Text>
-                ))}
-                <Text style={styles.listSubtitle}>Items:</Text>
-                {shoppingList?.items.map((item, index) => (
-                  <View key={index} style={styles.listItemContainer}>
-                    <Text style={styles.listItemText}>
-                      {item.name} - ${item.price.toFixed(2)} ({item.location})
-                    </Text>
-                    <TouchableOpacity onPress={() => deleteItemFromShoppingList(item.name)} style={styles.deleteButton}>
-                      <Text style={styles.deleteButtonText}>✕</Text>
-                    </TouchableOpacity>
-                  </View>
-                ))}
-              </>
-            )}
-
-            <TouchableOpacity onPress={addItemToShoppingList} style={styles.addButton}>
-              <Text style={styles.addButtonText}>Add Item</Text>
+          <View style={styles.bottomContainer}>
+            <TouchableOpacity onPress={generateShoppingList} style={styles.generateButton}>
+              <Text style={styles.generateButtonText}>Generate Shopping List</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity onPress={() => setModalVisible(false)} style={styles.closeButton}>
-              <Text style={styles.closeButtonText}>Close</Text>
-            </TouchableOpacity>
+            <View style={styles.inputContainer}>
+              <TextInput 
+                style={styles.input} 
+                placeholder="Type your message..." 
+                value={input} 
+                onChangeText={setInput}
+                multiline={false}
+                returnKeyType="send"
+                onSubmitEditing={handleSend}
+                blurOnSubmit={false}
+              />
+              <TouchableOpacity onPress={handleSend} style={styles.sendButton}>
+                <Text style={styles.sendButtonText}>Send</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
-      </Modal>
 
-      <View style={styles.inputContainer}>
-        <TextInput style={styles.input} placeholder="Type your message..." value={input} onChangeText={setInput} />
-        <TouchableOpacity onPress={handleSend} style={styles.sendButton}>
-          <Text style={styles.sendButtonText}>Send</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
-    </KeyboardAvoidingView>
+        {/* Keep Modal at the end */}
+        <Modal visible={modalVisible} animationType="slide" transparent onRequestClose={() => setModalVisible(false)}>
+          <View style={styles.modalContainer}>
+            <View style={styles.modalContent}>
+              <Text style={styles.listTitle}>Shopping List</Text>
+              {loadingList ? (
+                <ActivityIndicator size="large" color="#2E8B57" />
+              ) : (
+                <>
+                  <Text style={styles.listSubtitle}>Locations:</Text>
+                  {shoppingList?.locations.map((location, index) => (
+                    <Text key={index} style={styles.listItem}>- {location}</Text>
+                  ))}
+                  <Text style={styles.listSubtitle}>Items:</Text>
+                  {shoppingList?.items.map((item, index) => (
+                    <View key={index} style={styles.listItemContainer}>
+                      <Text style={styles.listItemText}>
+                        {item.name} - ${item.price.toFixed(2)} ({item.location})
+                      </Text>
+                      <TouchableOpacity onPress={() => deleteItemFromShoppingList(item.name)} style={styles.deleteButton}>
+                        <Text style={styles.deleteButtonText}>✕</Text>
+                      </TouchableOpacity>
+                    </View>
+                  ))}
+                </>
+              )}
+
+              <TouchableOpacity onPress={addItemToShoppingList} style={styles.addButton}>
+                <Text style={styles.addButtonText}>Add Item</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity onPress={() => setModalVisible(false)} style={styles.closeButton}>
+                <Text style={styles.closeButtonText}>Close</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 10, backgroundColor: "#f7f7f7" },
-  title: { fontSize: 20, fontWeight: 'bold', color: "#2E8B57", marginBottom: 10, textAlign: 'center' },
-  chatContainer: { flex: 1, marginBottom: 20 },
-  messageBubble: { padding: 12, marginVertical: 8, maxWidth: '75%', borderRadius: 20, marginHorizontal: 10 },
-  userMessage: { backgroundColor: "#2E8B57", alignSelf: 'flex-end' },
-  botMessage: { backgroundColor: "#D1E7DD", alignSelf: 'flex-start' },
-  messageText: { fontSize: 16, lineHeight: 22 },
-  generateButton: { backgroundColor: "#FFA500", paddingVertical: 12, borderRadius: 20, justifyContent: 'center', alignItems: 'center', marginBottom: 10 },
-  generateButtonText: { color: "#fff", fontSize: 16, fontWeight: 'bold' },
-  modalContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: "rgba(0,0,0,0.5)" },
-  modalContent: { backgroundColor: "#fff", padding: 20, borderRadius: 10, width: '80%' },
-  listTitle: { fontSize: 18, fontWeight: "bold", marginBottom: 10 },
-  listItem: { fontSize: 16, marginBottom: 5 },
-  listItemContainer: { flexDirection: 'row', alignItems: 'center', marginBottom: 10, position: 'relative' },
-  itemInput: { flex: 1, backgroundColor: "#fff", padding: 10, borderRadius: 10, borderWidth: 1, borderColor: "#2E8B57", marginHorizontal: 5 },
-  removeButton: { position: 'absolute', left: -30, backgroundColor: "#FF4C4C", padding: 8, borderRadius: 50, width: 30, height: 30, justifyContent: "center", alignItems: "center" },
-  removeButtonText: { color: "#fff", fontSize: 18, fontWeight: "bold" },
-  inputContainer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '95%' },
-  input: { height: 45, width: '85%', borderRadius: 30, backgroundColor: "#fff", paddingHorizontal: 15, borderColor: '#2E8B57', borderWidth: 1, fontSize: 16 },
-  sendButton: { backgroundColor: "#2E8B57", paddingVertical: 10, paddingHorizontal: 16, borderRadius: 20, marginLeft: 8},
-  sendButtonText: { color: "#fff", fontSize: 16, fontWeight: 'bold' },
-  addButton: { backgroundColor: "#2E8B57", padding: 12, borderRadius: 20, alignItems: 'center', marginTop: 10 },
-  addButtonText: { color: "#fff", fontSize: 16, fontWeight: 'bold' },
+  safeArea: {
+    flex: 1,
+    backgroundColor: "#f7f7f7"
+  },
+  keyboardAvoidingView: {
+    flex: 1
+  },
+  container: { 
+    flex: 1, 
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    backgroundColor: "#f7f7f7",
+  },
+  chatContainer: { 
+    flex: 1, 
+    marginBottom: 8
+  },
+  messageBubble: { 
+    padding: 12, 
+    marginVertical: 4, 
+    maxWidth: '80%', 
+    borderRadius: 20, 
+    marginHorizontal: 12 
+  },
+  userMessage: { 
+    backgroundColor: "#2E8B57", 
+    alignSelf: 'flex-end',
+    marginLeft: 50
+  },
+  botMessage: { 
+    backgroundColor: "#D1E7DD", 
+    alignSelf: 'flex-start',
+    marginRight: 50
+  },
+  messageText: { 
+    fontSize: 16, 
+    lineHeight: 22 
+  },
+  userMessageText: {
+    color: '#ffffff'
+  },
+  botMessageText: {
+    color: '#000000'
+  },
+  generateButton: { 
+    backgroundColor: "#FFA500", 
+    paddingVertical: 12,
+    paddingHorizontal: 16, 
+    borderRadius: 20, 
+    justifyContent: 'center', 
+    alignItems: 'center', 
+    marginBottom: 12,
+    marginHorizontal: 8
+  },
+  generateButtonText: { 
+    color: "#fff", 
+    fontSize: 16, 
+    fontWeight: 'bold' 
+  },
+  inputContainer: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    paddingHorizontal: 8,
+    paddingVertical: 8,
+    backgroundColor: '#f7f7f7',
+    borderTopWidth: 1,
+    borderTopColor: '#e0e0e0',
+    paddingBottom: Platform.OS === 'ios' ? 20 : 8, // Add extra padding for iOS
+  },
+  input: { 
+    flex: 1,
+    minHeight: 45,
+    maxHeight: 100,
+    marginRight: 8,
+    borderRadius: 24, 
+    backgroundColor: "#fff", 
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderColor: '#2E8B57', 
+    borderWidth: 1, 
+    fontSize: 16 
+  },
+  sendButton: { 
+    backgroundColor: "#2E8B57", 
+    paddingVertical: 12, 
+    paddingHorizontal: 20, 
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  sendButtonText: { 
+    color: "#fff", 
+    fontSize: 16, 
+    fontWeight: 'bold' 
+  },
+  modalContainer: { 
+    flex: 1, 
+    justifyContent: 'center', 
+    alignItems: 'center', 
+    backgroundColor: "rgba(0,0,0,0.5)" 
+  },
+  modalContent: { 
+    backgroundColor: "#fff", 
+    padding: 24,
+    borderRadius: 16, 
+    width: '80%' 
+  },
+  listTitle: { 
+    fontSize: 18, 
+    fontWeight: "bold", 
+    marginBottom: 16 
+  },
+  listSubtitle: {
+    fontSize: 16,
+    fontWeight: "600",
+    marginTop: 16,
+    marginBottom: 8
+  },
+  listItem: { 
+    fontSize: 16, 
+    marginBottom: 8,
+    paddingVertical: 4
+  },
+  listItemContainer: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    marginBottom: 12,
+    paddingVertical: 4,
+    paddingHorizontal: 8
+  },
+  listItemText: {
+    flex: 1,
+    fontSize: 16
+  },
+  deleteButton: {
+    padding: 8,
+    marginLeft: 12,
+    backgroundColor: '#ff4444',
+    borderRadius: 8
+  },
+  deleteButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: 'bold'
+  },
+  closeButton: {
+    backgroundColor: '#e0e0e0',
+    padding: 12,
+    borderRadius: 16,
+    marginTop: 24,
+    alignItems: 'center'
+  },
+  closeButtonText: {
+    color: '#333',
+    fontSize: 16,
+    fontWeight: '600'
+  },
+  addButton: { 
+    backgroundColor: "#2E8B57", 
+    padding: 12, 
+    borderRadius: 20, 
+    alignItems: 'center', 
+    marginTop: 16 
+  },
+  addButtonText: { 
+    color: "#fff", 
+    fontSize: 16, 
+    fontWeight: 'bold' 
+  },
+  scrollViewContent: {
+    flexGrow: 1,
+    paddingBottom: 16
+  },
+  bottomContainer: {
+    width: '100%',
+    backgroundColor: '#f7f7f7',
+  },
 });
 

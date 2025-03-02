@@ -74,7 +74,9 @@ export default function RootLayout() {
         <Stack.Screen name="SignIn">
           {() => <SignIn onLogin={() => setIsLoggedIn(true)} />}
         </Stack.Screen>
-        <Stack.Screen name="SignUp" component={SignUp} />
+        <Stack.Screen name="SignUp">
+          {() => <SignUp onSignUp={() => setIsLoggedIn(true)} />}
+        </Stack.Screen>
         <Stack.Screen 
           name="Onboarding" 
           options={{ headerShown: false }}
@@ -124,6 +126,7 @@ export default function RootLayout() {
         },
         tabBarActiveTintColor: '#4CAF50',
         tabBarInactiveTintColor: 'gray',
+        tabBarHideOnKeyboard: true,
         tabBarStyle: {
           backgroundColor: '#f8f8f8',
           borderTopWidth: 0,
@@ -132,13 +135,14 @@ export default function RootLayout() {
           shadowOffset: { width: 0, height: 2 },
           shadowOpacity: 0.2,
           shadowRadius: 2,
-          height: 85,
-          paddingBottom: 30,
+          height: 65,
+          paddingBottom: 10,
         },
         
         tabBarLabelStyle: {
-          fontSize: 14,
+          fontSize: 12,
           fontWeight: 'bold',
+          marginBottom: 5,
         },
       })}
     >

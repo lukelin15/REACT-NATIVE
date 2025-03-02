@@ -1,5 +1,14 @@
 import React, { useState } from 'react';
-import { Text, View, StyleSheet, TextInput, TouchableOpacity } from 'react-native';
+import { 
+  Text, 
+  View, 
+  StyleSheet, 
+  TextInput, 
+  TouchableOpacity,
+  Animated,
+  KeyboardAvoidingView,
+  Platform
+} from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { auth } from '@/lib/firebase';
@@ -22,8 +31,18 @@ export default function SignIn({ onLogin }: SignInProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string>('');
-
   const navigation = useNavigation<SignInScreenNavigationProp>();
+
+  // Add animation value for fade-in effect
+  const fadeAnim = React.useRef(new Animated.Value(0)).current;
+
+  React.useEffect(() => {
+    Animated.timing(fadeAnim, {
+      toValue: 1,
+      duration: 1000,
+      useNativeDriver: true,
+    }).start();
+  }, []);
 
   const handleSignIn = async () => {
     try {
@@ -35,40 +54,69 @@ export default function SignIn({ onLogin }: SignInProps) {
   };
 
   return (
-    <View style={styles.mainContainer}>
-      <View style={styles.cardContainer}>
+    <KeyboardAvoidingView 
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      style={styles.mainContainer}
+    >
+      <Animated.View 
+        style={[
+          styles.cardContainer,
+          {
+            opacity: fadeAnim,
+            transform: [{
+              translateY: fadeAnim.interpolate({
+                inputRange: [0, 1],
+                outputRange: [50, 0]
+              })
+            }]
+          }
+        ]}
+      >
         <Text style={styles.title}>Welcome Back</Text>
+        <Text style={styles.subtitle}>Sign in to continue shopping</Text>
 
-        <TextInput
-          style={styles.input}
-          placeholder="Email"
-          value={email}
-          onChangeText={setEmail}
-          keyboardType="email-address"
-        />
+        <View style={styles.inputGroup}>
+          <TextInput
+            style={styles.input}
+            placeholder="Email"
+            value={email}
+            onChangeText={setEmail}
+            keyboardType="email-address"
+            autoCapitalize="none"
+            placeholderTextColor="#666"
+          />
 
-        <TextInput
-          style={styles.input}
-          placeholder="Password"
-          value={password}
-          onChangeText={setPassword}
-          secureTextEntry
-        />
+          <TextInput
+            style={styles.input}
+            placeholder="Password"
+            value={password}
+            onChangeText={setPassword}
+            secureTextEntry
+            placeholderTextColor="#666"
+          />
+        </View>
 
         {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
-        <TouchableOpacity style={styles.SignInButton} onPress={handleSignIn}>
-          <Text style={styles.SignInButtonText}>Sign In</Text>
+        <TouchableOpacity 
+          style={styles.signInButton}
+          onPress={handleSignIn}
+          activeOpacity={0.8}
+        >
+          <Text style={styles.signInButtonText}>Sign In</Text>
         </TouchableOpacity>
 
         <View style={styles.footerContainer}>
           <Text style={styles.footerText}>Don't have an account? </Text>
-          <TouchableOpacity onPress={() => navigation.navigate('SignUp')}>
+          <TouchableOpacity 
+            onPress={() => navigation.navigate('SignUp')}
+            activeOpacity={0.7}
+          >
             <Text style={styles.footerLink}>Sign up</Text>
           </TouchableOpacity>
         </View>
-      </View>
-    </View>
+      </Animated.View>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -78,62 +126,80 @@ const styles = StyleSheet.create({
     backgroundColor: '#4CAF50',
     justifyContent: 'center',
     alignItems: 'center',
+    padding: 20,
   },
   cardContainer: {
-    width: '90%',
-    padding: 20,
+    width: '100%',
+    maxWidth: 400,
+    padding: 24,
     backgroundColor: '#fff',
-    borderRadius: 15,
+    borderRadius: 24,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 5,
-    elevation: 6,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 8,
   },
   title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#4CAF50',
-    textAlign: 'center',
-    marginBottom: 20,
+    fontSize: 32,
+    fontWeight: '800',
+    color: '#1a1a1a',
+    marginBottom: 8,
+  },
+  subtitle: {
+    fontSize: 16,
+    color: '#666',
+    marginBottom: 32,
+  },
+  inputGroup: {
+    gap: 16,
+    marginBottom: 24,
   },
   input: {
     width: '100%',
-    padding: 15,
-    marginBottom: 15,
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 10,
-    backgroundColor: '#f9f9f9',
+    padding: 16,
+    fontSize: 16,
+    borderWidth: 1.5,
+    borderColor: '#e0e0e0',
+    borderRadius: 12,
+    backgroundColor: '#f8f8f8',
+    color: '#1a1a1a',
   },
   errorText: {
-    color: 'red',
-    marginBottom: 10,
+    color: '#ff3b30',
+    fontSize: 14,
+    marginBottom: 16,
     textAlign: 'center',
   },
-  SignInButton: {
+  signInButton: {
     backgroundColor: '#4CAF50',
-    paddingVertical: 15,
-    borderRadius: 10,
+    paddingVertical: 16,
+    borderRadius: 12,
     alignItems: 'center',
-    marginBottom: 15,
+    marginBottom: 24,
+    shadowColor: '#4CAF50',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
-  SignInButtonText: {
+  signInButtonText: {
     color: '#fff',
     fontSize: 18,
-    fontWeight: 'bold',
+    fontWeight: '600',
   },
   footerContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
+    alignItems: 'center',
   },
   footerText: {
-    fontSize: 16,
-    color: '#333',
+    fontSize: 15,
+    color: '#666',
   },
   footerLink: {
-    fontSize: 16,
+    fontSize: 15,
     color: '#4CAF50',
-    fontWeight: 'bold',
+    fontWeight: '600',
   },
 });
