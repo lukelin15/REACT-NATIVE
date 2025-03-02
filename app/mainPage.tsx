@@ -9,6 +9,7 @@ import {
   ScrollView,
   TouchableOpacity,
   Easing,
+  Platform,
 } from 'react-native';
 import { useNavigation, NavigationProp } from '@react-navigation/native';
 
@@ -29,6 +30,24 @@ type Position = {
 type AnimatedPosition = {
   x: number;
   y: number;
+};
+
+// Add this type definition at the top with other types
+type FeatureItemProps = {
+  icon: string;
+  title: string;
+  description: string;
+};
+
+// Add the FeatureItem component definition before the MainPage component
+const FeatureItem: React.FC<FeatureItemProps> = ({ icon, title, description }) => {
+  return (
+    <View style={styles.featureItem}>
+      <Text style={styles.featureIcon}>{icon}</Text>
+      <Text style={styles.featureTitle}>{title}</Text>
+      <Text style={styles.featureDescription}>{description}</Text>
+    </View>
+  );
 };
 
 export default function MainPage() {
@@ -104,11 +123,19 @@ export default function MainPage() {
   // PanResponder logic to handle the dragging gesture
   const parentResponder = PanResponder.create({
     onMoveShouldSetPanResponderCapture: (e, gestureState) => {
-      return false;
+      // Only capture initial panel drags, not scrolls inside content
+      return !isVisible && Math.abs(gestureState.dy) > Math.abs(gestureState.dx);
     },
     onStartShouldSetPanResponder: () => false,
     onMoveShouldSetPanResponder: (e, gestureState) => {
-      return gestureState.dy < -6 || gestureState.dy > 6; // Allow dragging up or down
+      // Only handle drag gestures on the handle when content is visible
+      if (isVisible) {
+        // Check if touch is in the drag handle area (top 60px)
+        const touchY = e.nativeEvent.locationY;
+        return touchY < 60 && Math.abs(gestureState.dy) > 10;
+      }
+      // Allow dragging up when panel is at bottom
+      return !isVisible && Math.abs(gestureState.dy) > 10;
     },
     onPanResponderTerminationRequest: () => false,
     onPanResponderMove: (evt, gestureState) => {
@@ -277,6 +304,54 @@ export default function MainPage() {
         SmartCart
       </Animated.Text>
 
+      <Animated.Text
+        style={[
+          styles.subtitle,
+          {
+            transform: [
+              { translateY: titlePosition },
+              { scale: Animated.add(1, titlePosition.interpolate({
+                inputRange: [-100, 0],
+                outputRange: [-0.1, 0],
+                extrapolate: 'clamp',
+              }))},
+            ],
+            opacity: titlePosition.interpolate({
+              inputRange: [-100, 0],
+              outputRange: [0, 1],
+              extrapolate: 'clamp',
+            }),
+          },
+        ]}
+      >
+        Shop smarter, not harder
+      </Animated.Text>
+
+      <Animated.View
+        style={[
+          styles.iconContainer,
+          {
+            transform: [
+              { translateY: titlePosition },
+              { scale: Animated.add(1, titlePosition.interpolate({
+                inputRange: [-100, 0],
+                outputRange: [-0.2, 0],
+                extrapolate: 'clamp',
+              }))},
+            ],
+            opacity: titlePosition.interpolate({
+              inputRange: [-100, 0],
+              outputRange: [0, 1],
+              extrapolate: 'clamp',
+            }),
+          },
+        ]}
+      >
+        <Text style={styles.icon}>🛒</Text>
+        <Text style={styles.icon}>🔍</Text>
+        <Text style={styles.icon}>💰</Text>
+      </Animated.View>
+
       <Animated.View
         style={[
           styles.draggable,
@@ -299,7 +374,15 @@ export default function MainPage() {
         {isVisible && (
           <Animated.ScrollView
             style={[styles.scroll, { opacity: fadeAnim }]}
-            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={true}
+            scrollEventThrottle={16}
+            bounces={true}
+            // Make sure ScrollView handles its own gestures
+            onStartShouldSetResponder={() => true}
+            onStartShouldSetResponderCapture={() => true}
+            onMoveShouldSetResponder={() => true}
+            onMoveShouldSetResponderCapture={() => true}
           >
             <Animated.Text
               style={[
@@ -316,11 +399,11 @@ export default function MainPage() {
                 },
               ]}
             >
-              Welcome
+              Smart Shopping, Made Personal
             </Animated.Text>
             <Animated.Text
               style={[
-                styles.lorem,
+                styles.subheading,
                 {
                   opacity: fadeAnim,
                   transform: [
@@ -334,8 +417,48 @@ export default function MainPage() {
                 },
               ]}
             >
-              Welcome to SmartCart, our Grocery Shopping List Recommendation System! This app helps you optimize your grocery shopping by providing recommendations based on your shopping list.
+              Your AI-Powered Grocery Assistant
             </Animated.Text>
+            
+            {/* Features Section */}
+            <View style={styles.featuresContainer}>
+              <FeatureItem
+                icon="🎯"
+                title="Personalized Lists"
+                description="Get smart recommendations based on your preferences"
+              />
+              <FeatureItem
+                icon="💡"
+                title="Smart Suggestions"
+                description="AI-powered recommendations for complementary items"
+              />
+              <FeatureItem
+                icon="💰"
+                title="Budget Friendly"
+                description="Price comparisons and budget optimization"
+              />
+              {/* Additional features to make content scrollable */}
+              <FeatureItem
+                icon="🔄"
+                title="Seamless Sync"
+                description="Keep your shopping lists synchronized across all your devices"
+              />
+              <FeatureItem
+                icon="📊"
+                title="Shopping Analytics"
+                description="Track your shopping habits and find ways to optimize your grocery budget"
+              />
+              <FeatureItem
+                icon="🔍"
+                title="Barcode Scanner"
+                description="Quickly add items to your list by scanning product barcodes"
+              />
+              
+              {/* Visual indicator that there's more content */}
+              <View style={styles.scrollIndicator}>
+                <Text style={styles.scrollIndicatorText}>Scroll for more features</Text>
+              </View>
+            </View>
           </Animated.ScrollView>
         )}
       </Animated.View>
@@ -470,6 +593,7 @@ const styles = StyleSheet.create({
   scroll: {
     width: '100%',
     padding: 20,
+    height: '80%', // Ensure there's enough room for scrolling
   },
   welcome: {
     fontSize: 34,
@@ -480,6 +604,20 @@ const styles = StyleSheet.create({
     textShadowColor: 'rgba(0, 0, 0, 0.1)',
     textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 2,
+  },
+  subheading: {
+    fontSize: 24,
+    fontWeight: '600',
+    textAlign: 'center',
+    marginVertical: 10,
+    color: '#fff',
+    textShadowColor: 'rgba(0, 0, 0, 0.1)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 2,
+  },
+  featuresContainer: {
+    marginTop: 20,
+    paddingBottom: 40, // Extra padding to ensure scrollability
   },
   lorem: {
     fontSize: 20,
@@ -546,5 +684,60 @@ const styles = StyleSheet.create({
     fontSize: 10,
     color: '#fff',
     fontWeight: 'bold',
+  },
+  featureItem: {
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 15,
+    padding: 20,
+    marginBottom: 15,
+  },
+  featureIcon: {
+    fontSize: 32,
+    marginBottom: 10,
+  },
+  featureTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#ffffff',
+    marginBottom: 5,
+  },
+  featureDescription: {
+    fontSize: 16,
+    color: 'rgba(255, 255, 255, 0.8)',
+    lineHeight: 22,
+  },
+  scrollContent: {
+    paddingBottom: 100, // Add padding at bottom to ensure last items are visible
+  },
+  scrollIndicator: {
+    alignItems: 'center',
+    marginTop: 20,
+    marginBottom: 10,
+    paddingVertical: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 20,
+  },
+  scrollIndicatorText: {
+    color: 'rgba(255, 255, 255, 0.7)',
+    fontSize: 14,
+  },
+  subtitle: {
+    fontSize: 18,
+    color: '#4CAF50',
+    textAlign: 'center',
+    marginTop: 5,
+    marginBottom: 15,
+    fontWeight: '400',
+    letterSpacing: 1,
+    textShadow: '1px 1px 1px rgba(0, 0, 0, 0.05)',
+  },
+  iconContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    marginBottom: 30,
+  },
+  icon: {
+    fontSize: 24,
+    marginHorizontal: 10,
   },
 });
