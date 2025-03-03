@@ -58,7 +58,7 @@ export default function MainPage() {
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
 
   const initialPosition: Position = { x: 0, y: height - 100 }; // Initial position at the bottom
-  const halfHeightPosition: Position = { x: 0, y: height * 0.4 }; // Position halfway up the screen
+  const halfHeightPosition: Position = { x: 0, y: height * 0.3 }; // Position halfway up the screen
   const position = useRef(new Animated.ValueXY(initialPosition)).current;
   const titlePosition = useRef(new Animated.Value(0)).current; // To animate title position
 
@@ -128,15 +128,16 @@ export default function MainPage() {
     },
     onStartShouldSetPanResponder: () => false,
     onMoveShouldSetPanResponder: (e, gestureState) => {
-      // Only handle drag gestures on the handle when content is visible
-      if (isVisible) {
-        // Check if touch is in the drag handle area (top 60px)
-        const touchY = e.nativeEvent.locationY;
-        return touchY < 60 && Math.abs(gestureState.dy) > 10;
+      const touchY = e.nativeEvent.locationY;
+      if (Math.abs(gestureState.dy) < Math.abs(gestureState.dx)) {
+        return false;
       }
-      // Allow dragging up when panel is at bottom
+      if (isVisible) {
+        return touchY < 50 && Math.abs(gestureState.dy) > 10;
+      }
       return !isVisible && Math.abs(gestureState.dy) > 10;
     },
+
     onPanResponderTerminationRequest: () => false,
     onPanResponderMove: (evt, gestureState) => {
       let newY = gestureState.dy/2;
@@ -152,6 +153,7 @@ export default function MainPage() {
       // Adjust the title's position based on drag
       titlePosition.setValue(newY / 2); // Shifting title up as the section is dragged
     },
+
     onPanResponderRelease: (evt, gestureState) => {
       // If dragged far enough up, snap to halfway up and show content
       if (gestureState.dy < -MIN_DRAG_THRESHOLD) {
@@ -379,6 +381,7 @@ export default function MainPage() {
             scrollEventThrottle={16}
             bounces={true}
             // Make sure ScrollView handles its own gestures
+            keyboardShouldPersistTaps="handled"
             onStartShouldSetResponder={() => true}
             onStartShouldSetResponderCapture={() => true}
             onMoveShouldSetResponder={() => true}
@@ -449,10 +452,11 @@ export default function MainPage() {
                 description="Track your shopping habits and find ways to optimize your grocery budget"
               />
               <FeatureItem
-                icon="🔍"
-                title="Barcode Scanner"
-                description="Quickly add items to your list by scanning product barcodes"
+                icon="🗺️"
+                title="Optimized Shopping Routes"
+                description="Plan the fastest route to multiple stores and get your groceries efficiently."
               />
+
               
               {/* Visual indicator that there's more content */}
               <View style={styles.scrollIndicator}>
@@ -680,8 +684,8 @@ const styles = StyleSheet.create({
   },
   tip: {
     position: 'absolute',
-    bottom: 20,
-    fontSize: 10,
+    bottom: 30,
+    fontSize: 14,
     color: '#fff',
     fontWeight: 'bold',
   },
@@ -689,7 +693,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 255, 255, 0.1)',
     borderRadius: 15,
     padding: 20,
-    marginBottom: 15,
+    marginBottom: 30,
   },
   featureIcon: {
     fontSize: 32,
@@ -707,11 +711,11 @@ const styles = StyleSheet.create({
     lineHeight: 22,
   },
   scrollContent: {
-    paddingBottom: 100, // Add padding at bottom to ensure last items are visible
+    paddingBottom: 350, // Add padding at bottom to ensure last items are visible
   },
   scrollIndicator: {
     alignItems: 'center',
-    marginTop: 20,
+    marginTop: 0,
     marginBottom: 10,
     paddingVertical: 8,
     backgroundColor: 'rgba(255, 255, 255, 0.1)',

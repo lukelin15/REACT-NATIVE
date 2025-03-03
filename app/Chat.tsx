@@ -1,6 +1,8 @@
 import React, { useState, useRef } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert, ActivityIndicator, Modal, KeyboardAvoidingView, Platform, SafeAreaView, Keyboard } from 'react-native';
 import { auth } from '@/lib/firebase';
+import RoutePlanner from './Route';
+
 
 export default function Chat() {
   const [messages, setMessages] = useState([{ sender: "Bot", text: "Hi! How can I help you today?" }]);
@@ -8,6 +10,12 @@ export default function Chat() {
   const [shoppingList, setShoppingList] = useState(null);
   const [loadingList, setLoadingList] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
+  const [storeAddresses, setStoreAddresses] = useState<string[]>([]);
+  const [origin, setOrigin] = useState<string>("");
+  const [destination, setDestination] = useState<string>("");
+  const [waypoints, setWaypoints] = useState<string[]>([]);
+
+
   const scrollViewRef = useRef<ScrollView | null>(null);
 
   const sendMessageToBackend = async (userMessage: string) => {
@@ -73,6 +81,20 @@ export default function Chat() {
 
       const data = await response.json();
       setShoppingList(data);
+
+      if (data.list_data?.store_recommendations?.stores) {
+        const extractedAddresses = data.list_data.store_recommendations.stores.map((store: any) => store.address);
+        setStoreAddresses(extractedAddresses);
+  
+        if (extractedAddresses.length > 1) {
+          setOrigin(extractedAddresses[0]); // First store
+          setDestination(extractedAddresses[extractedAddresses.length - 1]); // Last store
+          setWaypoints(extractedAddresses.slice(1, -1)); // Middle stores as waypoints
+        }
+      } else {
+        setStoreAddresses([]);
+      }
+
     } catch (error) {
       console.error("Error generating shopping list:", error);
       Alert.alert("Error", "Failed to generate shopping list. Please try again.");
@@ -151,7 +173,7 @@ export default function Chat() {
       <KeyboardAvoidingView
         style={styles.keyboardAvoidingView}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={0}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 90}
       >
         <View style={styles.container}>
           <ScrollView 
@@ -222,12 +244,25 @@ export default function Chat() {
                 <Text style={styles.addButtonText}>Add Item</Text>
               </TouchableOpacity>
 
+              {storeAddresses.length > 0 && (
+                <TouchableOpacity 
+                  onPress={() => setModalVisible(false)} // Close modal before opening route planner
+                  style={styles.routeButton}
+                >
+                  <Text style={styles.routeButtonText}>Show Route</Text>
+                </TouchableOpacity>
+              )}
+
               <TouchableOpacity onPress={() => setModalVisible(false)} style={styles.closeButton}>
                 <Text style={styles.closeButtonText}>Close</Text>
               </TouchableOpacity>
             </View>
           </View>
         </Modal>
+        {/* Add RoutePlanner Below */}
+        {storeAddresses.length > 0 && (
+          <RoutePlanner origin={origin} destination={destination} waypoints={waypoints} />
+        )}
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -411,5 +446,18 @@ const styles = StyleSheet.create({
     width: '100%',
     backgroundColor: '#f7f7f7',
   },
+  routeButton: {
+    backgroundColor: "#1E90FF",
+    padding: 12,
+    borderRadius: 20,
+    alignItems: "center",
+    marginTop: 16,
+  },
+  routeButtonText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "bold",
+  },
+  
 });
 
