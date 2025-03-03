@@ -452,6 +452,11 @@ export default function MainPage() {
                 description="Track your shopping habits and find ways to optimize your grocery budget"
               />
               <FeatureItem
+                icon="🛒"
+                title="One-Click Checkout"
+                description="Seamlessly purchase all your grocery items directly from your generated shopping list."
+              />
+              <FeatureItem
                 icon="🗺️"
                 title="Optimized Shopping Routes"
                 description="Plan the fastest route to multiple stores and get your groceries efficiently."
