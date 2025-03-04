@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Image, Modal } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Image, Modal, Dimensions } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { Ionicons } from '@expo/vector-icons';
@@ -46,7 +46,7 @@ const recommendationImages: { [key: string]: any } = {
   Potato: require('../assets/images/Potato.jpg'),
 };
 
-
+const windowHeight = Dimensions.get('window').height;
 
 export default function Index({ navigation }: IndexProps) {
   const [searchText, setSearchText] = useState('');
@@ -95,197 +95,380 @@ export default function Index({ navigation }: IndexProps) {
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-
-      {/* Address Section */}
-      <View style={styles.addressContainer}>
-        <Text style={styles.addressTitle}>Your Address</Text>
-        <View style={styles.addressTextContainer}>
-          {!isEditingAddress ? (
-            <>
-              <Text style={styles.addressText}>
-                {newAddress.line1}, {newAddress.line2 ? `${newAddress.line2}, ` : ''}{newAddress.city}, {newAddress.country} - {newAddress.zip}
+    <ScrollView 
+      style={styles.mainContainer}
+      contentContainerStyle={styles.scrollContent}
+    >
+      {/* Header Section */}
+      <View style={styles.header}>
+        <View style={styles.headerContent}>
+          <View style={styles.locationContainer}>
+            <Ionicons name="location-outline" size={20} color="#666" />
+            <TouchableOpacity onPress={() => setIsEditingAddress(true)}>
+              <Text style={styles.locationText}>Delivery • {address.city}</Text>
+              <Text style={styles.addressText} numberOfLines={1}>
+                {address.line1}
               </Text>
-              <TouchableOpacity onPress={() => setIsEditingAddress(true)} style={styles.editButton}>
-                <Text style={styles.editButtonText}><Ionicons name="create-outline" size={24} color="blue" /></Text>
-              </TouchableOpacity>
-            </>
-          ) : (
-            <Modal
-              visible={isEditingAddress}
-              animationType="slide"
-              transparent={true}
-              onRequestClose={handleCancelEdit}
-            >
-              <View style={styles.modalContainer}>
-                <View style={styles.modalContent}>
-                  <Text style={styles.modalTitle}>Edit Address</Text>
-
-                  {/* Address Line 1 */}
-                  <TextInput
-                    style={styles.modalInput}
-                    placeholder="Address Line 1"
-                    value={newAddress.line1}
-                    onChangeText={(text) => setNewAddress({ ...newAddress, line1: text })}
-                  />
-
-                  {/* Address Line 2 (Optional) */}
-                  <TextInput
-                    style={styles.modalInput}
-                    placeholder="Address Line 2 (optional)"
-                    value={newAddress.line2}
-                    onChangeText={(text) => setNewAddress({ ...newAddress, line2: text })}
-                  />
-
-                  {/* City */}
-                  <TextInput
-                    style={styles.modalInput}
-                    placeholder="City"
-                    value={newAddress.city}
-                    onChangeText={(text) => setNewAddress({ ...newAddress, city: text })}
-                  />
-
-                  {/* Country Dropdown */}
-                  <Picker
-                    selectedValue={newAddress.country}
-                    style={styles.modalInput}
-                    onValueChange={(itemValue: string) => setNewAddress({ ...newAddress, country: itemValue })}
-                  >
-                    {countries.map((country, index) => (
-                      <Picker.Item key={index} label={country} value={country} />
-                    ))}
-                  </Picker>
-
-                  {/* ZIP/Postal Code */}
-                  <TextInput
-                    style={styles.modalInput}
-                    placeholder="ZIP or Postal Code"
-                    value={newAddress.zip}
-                    onChangeText={(text) => setNewAddress({ ...newAddress, zip: text })}
-                    keyboardType="numeric"
-                  />
-
-                  {/* Save and Cancel buttons */}
-                  <View style={styles.modalButtons}>
-                    <TouchableOpacity onPress={handleCancelEdit} style={styles.modalButton}>
-                      <Text style={styles.modalButtonText}>Cancel</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity onPress={handleSaveAddress} style={styles.modalButton}>
-                      <Text style={styles.modalButtonText}>Save</Text>
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              </View>
-            </Modal>
-          )}
-        </View>
-      </View>
-
-      {/* Search Bar */}
-      <TextInput
-        style={styles.searchInput}
-        placeholder="Search for items or categories"
-        value={searchText}
-        onChangeText={handleSearch}
-      />
-
-      
-      {/* Filtered Categories */}
-      <Text style={styles.sectionTitle}>Categories</Text>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.buttonRow}>
-        {filteredCategories.map((category, index) => (
-          <TouchableOpacity key={index} style={styles.button}>
-            {/* Use the categoryImages object to get the image for each category */}
-            <Image source={categoryImages[category]} style={styles.buttonImage} />
-            <Text style={styles.buttonText}>{category}</Text>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
-
-
-      {/* Filtered Loved Items */}
-      <Text style={styles.sectionTitle}>Loved Items</Text>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.buttonRow}>
-        {lovedItems.map((item, index) => (
-          <TouchableOpacity key={index} style={styles.button}>
-            <Image source={images[item]} style={styles.buttonImage} />
-            <Text style={styles.buttonText}>{item}</Text>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
-
-      {/* Recommendations Section */}
-      <View style={styles.recommendationContainer}>
-        <View style={styles.recommendationHeader}>
-          <Text style={styles.recommendationTitle}>You might need</Text>
-          <TouchableOpacity style={styles.seeMore} onPress={() => navigation.navigate('ItemsYouMightNeed')}>
-            <Text style={styles.seeMoreText}>See More</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.recommendationRow}>
-        {filteredItems.map((item, index) => (
-          <View key={index} style={styles.card}>
-            {/* Use recommendationImages to get the image for each recommended item */}
-            <Image source={recommendationImages[item.name]} style={styles.cardImage} />
-            <Text style={styles.cardText}>{item.name}</Text>
+            </TouchableOpacity>
           </View>
-        ))}
-      </ScrollView>
+        </View>
+      </View>
+
+      {/* Action Buttons */}
+      <View style={styles.actionButtons}>
+        <TouchableOpacity style={styles.actionButton}>
+          <Ionicons name="repeat" size={24} color="#fff" />
+          <Text style={styles.actionButtonText}>ORDER{'\n'}AGAIN</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.actionButton}>
+          <Ionicons name="storefront" size={24} color="#fff" />
+          <Text style={styles.actionButtonText}>LOCAL{'\n'}SHOP</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Promo Banner */}
+      <View style={styles.promoBanner}>
+        <View style={styles.promoContent}>
+          <View style={styles.promoTextContainer}>
+            <Text style={styles.promoTitle}>Top deal!</Text>
+            <Text style={styles.promoText}>FRESH APPLES{'\n'}UP TO 15% OFF</Text>
+            <TouchableOpacity style={styles.shopNowButton}>
+              <Text style={styles.shopNowText}>Shop Now</Text>
+            </TouchableOpacity>
+          </View>
+          <View style={styles.promoImageContainer}>
+            <Image 
+              source={images.Apple}
+              style={styles.promoImage}
+              resizeMode="contain"
+            />
+          </View>
+        </View>
+      </View>
+
+      {/* Wrap the remaining content in a View */}
+      <View style={styles.mainContent}>
+        {/* Categories Section */}
+        <View style={styles.categoriesSection}>
+          <Text style={styles.sectionTitle}>Shop by category</Text>
+          <ScrollView 
+            horizontal 
+            showsHorizontalScrollIndicator={false} 
+            style={styles.categoryRow}
+          >
+            {filteredCategories.map((category, index) => (
+              <TouchableOpacity key={index} style={styles.categoryItem}>
+                <View style={styles.categoryIconContainer}>
+                  <Image 
+                    source={categoryImages[category]} 
+                    style={styles.categoryIcon}
+                    resizeMode="cover"
+                  />
+                </View>
+                <Text style={styles.categoryLabel}>{category}</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+
+        {/* Today's Special Section */}
+        <View style={styles.specialSection}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Today's Special</Text>
+            <TouchableOpacity>
+              <Text style={styles.seeAllText}>See all</Text>
+            </TouchableOpacity>
+          </View>
+          <ScrollView 
+            horizontal 
+            showsHorizontalScrollIndicator={false} 
+            style={styles.specialRow}
+            contentContainerStyle={styles.specialRowContent}
+          >
+            {filteredItems.map((item, index) => (
+              <TouchableOpacity key={index} style={styles.specialCard}>
+                <Image 
+                  source={recommendationImages[item.name]} 
+                  style={styles.specialImage}
+                  resizeMode="cover"
+                />
+                <View style={styles.specialInfo}>
+                  <Text style={styles.specialName}>{item.name}</Text>
+                  <Text style={styles.specialRating}>⭐ 4.5</Text>
+                </View>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+      </View>
+
+      {/* Address Edit Modal */}
+      <Modal
+        visible={isEditingAddress}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={handleCancelEdit}
+      >
+        <View style={styles.modalContainer}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Edit Address</Text>
+            <TextInput
+              style={styles.modalInput}
+              placeholder="Address Line 1"
+              value={newAddress.line1}
+              onChangeText={(text) => setNewAddress({ ...newAddress, line1: text })}
+            />
+            <TextInput
+              style={styles.modalInput}
+              placeholder="Address Line 2 (optional)"
+              value={newAddress.line2}
+              onChangeText={(text) => setNewAddress({ ...newAddress, line2: text })}
+            />
+            <TextInput
+              style={styles.modalInput}
+              placeholder="City"
+              value={newAddress.city}
+              onChangeText={(text) => setNewAddress({ ...newAddress, city: text })}
+            />
+            <Picker
+              selectedValue={newAddress.country}
+              style={styles.modalInput}
+              onValueChange={(itemValue: string) => setNewAddress({ ...newAddress, country: itemValue })}
+            >
+              {countries.map((country, index) => (
+                <Picker.Item key={index} label={country} value={country} />
+              ))}
+            </Picker>
+            <TextInput
+              style={styles.modalInput}
+              placeholder="ZIP or Postal Code"
+              value={newAddress.zip}
+              onChangeText={(text) => setNewAddress({ ...newAddress, zip: text })}
+              keyboardType="numeric"
+            />
+            <View style={styles.modalButtons}>
+              <TouchableOpacity onPress={handleCancelEdit} style={[styles.modalButton, styles.cancelButton]}>
+                <Text style={styles.modalButtonText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={handleSaveAddress} style={[styles.modalButton, styles.saveButton]}>
+                <Text style={styles.modalButtonText}>Save</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  mainContainer: {
+    flex: 1,
+    backgroundColor: '#fff',
+  },
+  scrollContent: {
     flexGrow: 1,
-    padding: 20,
-    backgroundColor: "#C8E6C9",
+    minHeight: windowHeight,
   },
-  searchInput: {
-    height: 45,
-    borderRadius: 30,
-    backgroundColor: "#fff",
-    paddingLeft: 15,
-    borderColor: '#2E8B57',
-    borderWidth: 1,
-    fontSize: 16,
-    marginBottom: 20,
+  mainContent: {
+    flex: 1,
+    paddingBottom: 24,
   },
-  addressContainer: {
-    marginBottom: 20,
+  header: {
+    paddingTop: 10,
+    paddingHorizontal: 16,
+    paddingBottom: 12,
+    backgroundColor: '#fff',
   },
-  addressTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginBottom: 5,
-    textAlign: 'center', 
-  },
-  addressTextContainer: {
+  headerContent: {
     flexDirection: 'row',
-    justifyContent: 'center', 
     alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  locationContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  locationText: {
+    fontSize: 12,
+    color: '#666',
   },
   addressText: {
-    fontSize: 16,
-    color: "#333",
-    textAlign: 'center',
-  },
-  
-  editButton: {
-    marginLeft: 1,
-    paddingVertical: 5,
-    paddingHorizontal: 10,
-    backgroundColor: 'transparent',
-    borderRadius: 20,
-  },
-  editButtonText: {
-    color: '#000', 
     fontSize: 14,
-    fontWeight: 'bold',
+    fontWeight: '600',
+    color: '#000',
   },
-  
+  actionButtons: {
+    flexDirection: 'row',
+    paddingHorizontal: 16,
+    gap: 12,
+    marginBottom: 16,
+  },
+  actionButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#4CAF50',
+    padding: 12,
+    borderRadius: 8,
+  },
+  actionButtonText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  promoBanner: {
+    marginHorizontal: 16,
+    marginBottom: 24,
+    backgroundColor: '#E8F5E9',
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  promoContent: {
+    padding: 16,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  promoTextContainer: {
+    flex: 1,
+    paddingRight: 16,
+  },
+  promoTitle: {
+    fontSize: 12,
+    color: '#666',
+    marginBottom: 4,
+  },
+  promoText: {
+    fontSize: 16,
+    fontWeight: '700',
+    marginBottom: 12,
+    color: '#1B5E20',
+  },
+  shopNowButton: {
+    backgroundColor: '#1B5E20',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 6,
+    alignSelf: 'flex-start',
+  },
+  shopNowText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  promoImageContainer: {
+    width: 100,
+    height: 100,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  promoImage: {
+    width: '100%',
+    height: '100%',
+  },
+  categoriesSection: {
+    paddingHorizontal: 16,
+    marginBottom: 24,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    marginBottom: 12,
+  },
+  categoryRow: {
+    marginHorizontal: -16,
+    paddingHorizontal: 16,
+  },
+  categoryItem: {
+    alignItems: 'center',
+    marginRight: 16,
+    width: 80,
+  },
+  categoryIconContainer: {
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    backgroundColor: '#E8F5E9',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 8,
+    overflow: 'hidden',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  categoryIcon: {
+    width: '100%',
+    height: '100%',
+  },
+  categoryLabel: {
+    fontSize: 12,
+    color: '#666',
+    textAlign: 'center',
+    marginTop: 4,
+  },
+  specialSection: {
+    paddingHorizontal: 16,
+    marginBottom: 24,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  seeAllText: {
+    fontSize: 14,
+    color: '#4CAF50',
+    fontWeight: '600',
+  },
+  specialRow: {
+  },
+  specialRowContent: {
+    paddingBottom: 16,
+  },
+  specialCard: {
+    marginRight: 16,
+    width: 160,
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 8,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  specialImage: {
+    width: '100%',
+    height: 160,
+    borderRadius: 12,
+    marginBottom: 8,
+  },
+  specialInfo: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  specialName: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  specialRating: {
+    fontSize: 12,
+    color: '#666',
+  },
   modalContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -294,111 +477,48 @@ const styles = StyleSheet.create({
   },
   modalContent: {
     backgroundColor: '#fff',
-    padding: 20,
-    borderRadius: 10,
-    width: 300,
+    padding: 24,
+    borderRadius: 20,
+    width: '90%',
+    maxWidth: 400,
   },
   modalTitle: {
-    fontSize: 18,
+    fontSize: 24,
     fontWeight: 'bold',
-    marginBottom: 10,
+    color: '#1A1A1A',
+    marginBottom: 20,
+    textAlign: 'center',
   },
   modalInput: {
-    height: 40,
-    borderColor: '#ddd',
-    borderWidth: 1,
-    borderRadius: 5,
+    height: 50,
+    backgroundColor: '#F8F9FA',
+    borderRadius: 12,
+    paddingHorizontal: 15,
     marginBottom: 15,
-    paddingLeft: 10,
+    fontSize: 16,
   },
   modalButtons: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    marginTop: 10,
+    gap: 15,
   },
   modalButton: {
-    paddingVertical: 10,
-    paddingHorizontal: 20,
+    flex: 1,
+    height: 50,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  cancelButton: {
+    backgroundColor: '#FF4B4B',
+  },
+  saveButton: {
     backgroundColor: '#2E8B57',
-    borderRadius: 5,
   },
   modalButtonText: {
     color: '#fff',
-  },
-  buttonRow: {
-    marginBottom: 20,
-  },
-  button: {
-    marginRight: 15,
-    backgroundColor: '#fff',
-    borderRadius: 10,
-    padding: 10,
-    width: 120,
-    height: 120,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  buttonImage: {
-    width: 80,
-    height: 80,
-    borderRadius: 10,
-    marginBottom: 10,
-  },
-  buttonText: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: '#333',
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 10,
-  },
-  recommendationContainer: {
-    marginVertical: 10,
-  },
-  recommendationHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 5,
-  },
-  recommendationTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  seeMore: {
-    marginTop: 5,
-  },
-  seeMoreText: {
-    fontSize: 14,
-    color: '#2E8B57',
-  },
-  recommendationRow: {
-    marginTop: 0,
-  },
-  card: {
-    width: 100,
-    height: 140,
-    marginRight: 15,
-    backgroundColor: '#fff',
-    borderRadius: 10,
-    padding: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 5,
-    elevation: 3,
-  },
-  cardImage: {
-    width: 80,
-    height: 80,
-    borderRadius: 10,
-    marginBottom: 10,
-  },
-  cardText: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: '#333',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });

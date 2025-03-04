@@ -1,6 +1,8 @@
 import React, { useState, useRef } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert, ActivityIndicator, Modal } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert, ActivityIndicator, Modal, KeyboardAvoidingView, Platform, SafeAreaView, Keyboard } from 'react-native';
 import { auth } from '@/lib/firebase';
+import RoutePlanner from './Route';
+
 
 export default function Chat() {
   const [messages, setMessages] = useState([{ sender: "Bot", text: "Hi! How can I help you today?" }]);
@@ -8,6 +10,12 @@ export default function Chat() {
   const [shoppingList, setShoppingList] = useState(null);
   const [loadingList, setLoadingList] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
+  const [storeAddresses, setStoreAddresses] = useState<string[]>([]);
+  const [origin, setOrigin] = useState<string>("");
+  const [destination, setDestination] = useState<string>("");
+  const [waypoints, setWaypoints] = useState<string[]>([]);
+
+
   const [showGenerateButton, setShowGenerateButton] = useState(false);
   const scrollViewRef = useRef<ScrollView | null>(null);
 
@@ -85,6 +93,20 @@ export default function Chat() {
 
       const data = await response.json();
       setShoppingList(data);
+
+      if (data.list_data?.store_recommendations?.stores) {
+        const extractedAddresses = data.list_data.store_recommendations.stores.map((store: any) => store.address);
+        setStoreAddresses(extractedAddresses);
+  
+        if (extractedAddresses.length > 1) {
+          setOrigin(extractedAddresses[0]); // First store
+          setDestination(extractedAddresses[extractedAddresses.length - 1]); // Last store
+          setWaypoints(extractedAddresses.slice(1, -1)); // Middle stores as waypoints
+        }
+      } else {
+        setStoreAddresses([]);
+      }
+
     } catch (error) {
       console.error("Error generating shopping list:", error);
       Alert.alert("Error", "Failed to generate shopping list. Please try again.");
@@ -126,59 +148,104 @@ export default function Chat() {
 
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Chat</Text>
-      <ScrollView style={styles.chatContainer} ref={scrollViewRef} onContentSizeChange={() => scrollViewRef.current?.scrollToEnd({ animated: true })}>
-        {messages.map((message, index) => (
-          <View key={index} style={[styles.messageBubble, message.sender === "User" ? styles.userMessage : styles.botMessage]}>
-            <Text style={styles.messageText}>{stripMarkdown(message.text)}</Text>
-          </View>
-        ))}
-      </ScrollView>
+    <SafeAreaView style={styles.safeArea}>
+      <KeyboardAvoidingView
+        style={styles.keyboardAvoidingView}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 90}
+      >
+        <View style={styles.container}>
+          <ScrollView 
+            style={styles.chatContainer} 
+            ref={scrollViewRef}
+            onContentSizeChange={() => scrollViewRef.current?.scrollToEnd({ animated: true })}
+            keyboardShouldPersistTaps="handled"
+            contentContainerStyle={styles.scrollViewContent}
+          >
+            {messages.map((message, index) => (
+              <View key={index} style={[styles.messageBubble, message.sender === "User" ? styles.userMessage : styles.botMessage]}>
+                <Text style={[styles.messageText, message.sender === "User" ? styles.userMessageText : styles.botMessageText]}>{stripMarkdown(message.text)}</Text>
+              </View>
+            ))}
+          </ScrollView>
 
       {showGenerateButton && (
-        <TouchableOpacity onPress={generateShoppingList} style={styles.generateButton}>
-          <Text style={styles.generateButtonText}>Generate Shopping List</Text>
-        </TouchableOpacity>
+            <View style={styles.bottomContainer}>
+            <TouchableOpacity onPress={generateShoppingList} style={styles.generateButton}>
+                <Text style={styles.generateButtonText}>Generate Shopping List</Text>
+              </TouchableOpacity>
       )}
 
-      <Modal visible={modalVisible} animationType="slide" transparent onRequestClose={() => setModalVisible(false)}>
-        <View style={styles.modalContainer}>
-          <View style={styles.modalContent}>
-            <Text style={styles.listTitle}>Shopping List</Text>
-            {loadingList ? (
-              <ActivityIndicator size="large" color="#2E8B57" />
-            ) : (
-              <>
-                <Text style={styles.listSubtitle}>Locations:</Text>
-                {shoppingList?.locations.map((location, index) => (
-                  <Text key={index} style={styles.listItem}>- {location}</Text>
-                ))}
-                <Text style={styles.listSubtitle}>Items:</Text>
-                {shoppingList?.items.map((item, index) => (
-                  <View key={index} style={styles.listItemContainer}>
-                    <Text style={styles.listItemText}>{item.name} - ${item.price.toFixed(2)} ({item.location})</Text>
-                    <TouchableOpacity onPress={() => deleteItemFromShoppingList(item.name)} style={styles.deleteButton}>
-                      <Text style={styles.deleteButtonText}>✕</Text>
-                    </TouchableOpacity>
-                  </View>
-                ))}
-              </>
-            )}
-            <TouchableOpacity onPress={() => setModalVisible(false)} style={styles.closeButton}>
-              <Text style={styles.closeButtonText}>Close</Text>
-            </TouchableOpacity>
+            <View style={styles.inputContainer}>
+              <TextInput 
+                style={styles.input} 
+                placeholder="Type your message..." 
+                value={input} 
+                onChangeText={setInput}
+                multiline={false}
+                returnKeyType="send"
+                onSubmitEditing={handleSend}
+                blurOnSubmit={false}
+              />
+              <TouchableOpacity onPress={handleSend} style={styles.sendButton}>
+                <Text style={styles.sendButtonText}>Send</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
-      </Modal>
 
-      <View style={styles.inputContainer}>
-        <TextInput style={styles.input} placeholder="Type your message..." value={input} onChangeText={setInput} />
-        <TouchableOpacity onPress={handleSend} style={styles.sendButton}>
-          <Text style={styles.sendButtonText}>Send</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
+        {/* Keep Modal at the end */}
+        <Modal visible={modalVisible} animationType="slide" transparent onRequestClose={() => setModalVisible(false)}>
+          <View style={styles.modalContainer}>
+            <View style={styles.modalContent}>
+              <Text style={styles.listTitle}>Shopping List</Text>
+              {loadingList ? (
+                <ActivityIndicator size="large" color="#2E8B57" />
+              ) : (
+                <>
+                  <Text style={styles.listSubtitle}>Locations:</Text>
+                  {shoppingList?.locations.map((location, index) => (
+                    <Text key={index} style={styles.listItem}>- {location}</Text>
+                  ))}
+                  <Text style={styles.listSubtitle}>Items:</Text>
+                  {shoppingList?.items.map((item, index) => (
+                    <View key={index} style={styles.listItemContainer}>
+                      <Text style={styles.listItemText}>
+                        {item.name} - ${item.price.toFixed(2)} ({item.location})
+                      </Text>
+                      <TouchableOpacity onPress={() => deleteItemFromShoppingList(item.name)} style={styles.deleteButton}>
+                        <Text style={styles.deleteButtonText}>✕</Text>
+                      </TouchableOpacity>
+                    </View>
+                  ))}
+                </>
+              )}
+
+              <TouchableOpacity onPress={addItemToShoppingList} style={styles.addButton}>
+                <Text style={styles.addButtonText}>Add Item</Text>
+              </TouchableOpacity>
+
+              {storeAddresses.length > 0 && (
+                <TouchableOpacity 
+                  onPress={() => setModalVisible(false)} // Close modal before opening route planner
+                  style={styles.routeButton}
+                >
+                  <Text style={styles.routeButtonText}>Show Route</Text>
+                </TouchableOpacity>
+              )}
+
+              <TouchableOpacity onPress={() => setModalVisible(false)} style={styles.closeButton}>
+                <Text style={styles.closeButtonText}>Close</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
+        {/* Add RoutePlanner Below */}
+        {storeAddresses.length > 0 && (
+          <RoutePlanner origin={origin} destination={destination} waypoints={waypoints} />
+        )}
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
@@ -205,8 +272,31 @@ const styles = StyleSheet.create({
   input: { height: 45, width: '85%', borderRadius: 30, backgroundColor: "#fff", paddingHorizontal: 15, borderColor: '#2E8B57', borderWidth: 1, fontSize: 16 },
   sendButton: { backgroundColor: "#2E8B57", paddingVertical: 10, paddingHorizontal: 16, borderRadius: 20 },
   sendButtonText: { color: "#fff", fontSize: 16, fontWeight: 'bold' },
-  deleteButton: { backgroundColor: "red", padding: 5, borderRadius: 10, marginLeft: 10 },
-  deleteButtonText: { color: "#fff", fontSize: 16 },
-});
+  addButton: { backgroundColor: "#2E8B57", padding: 12, borderRadius: 20, alignItems: 'center', marginTop: 10 },
+  addButtonText: { color: "#fff", fontSize: 16, fontWeight: 'bold' },
 
+  // Additional styles from the second code
+  tip: { 
+    position: 'absolute', 
+    bottom: 30, // Keeping the last assigned value
+    fontSize: 14, // Keeping the last assigned value
+    color: '#fff', 
+    fontWeight: 'bold' 
+  },
+  featureItem: { 
+    backgroundColor: 'rgba(255, 255, 255, 0.1)', 
+    borderRadius: 15, 
+    padding: 20, 
+    marginBottom: 30 // Keeping the last assigned value
+  },
+  featureIcon: { fontSize: 32 },
+  scrollContent: { paddingBottom: 350 }, // Keeping the last assigned value
+  scrollIndicator: { 
+    alignItems: 'center', 
+    marginTop: 0, // Keeping the last assigned value
+    marginBottom: 10, 
+    paddingVertical: 8, 
+    backgroundColor: 'rgba(255, 255, 255, 0.1)' 
+  }
+});
 

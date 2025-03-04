@@ -22,12 +22,23 @@ const Tab = createBottomTabNavigator();
 
 function HomeStack() {
   return (
-    <Stack.Navigator>
+    <Stack.Navigator
+      screenOptions={{
+        headerStyle: {
+          backgroundColor: '#4CAF50',
+        },
+        headerTintColor: '#FFFFFF',
+        headerTitleStyle: {
+          fontWeight: 'bold',
+        },
+      }}
+    >
       <Stack.Screen name="Home" component={Index} />
       <Stack.Screen name="ItemsYouMightNeed" component={ItemsYouMightNeed} />
     </Stack.Navigator>
   );
 }
+
 
 
 export default function RootLayout() {
@@ -63,7 +74,9 @@ export default function RootLayout() {
         <Stack.Screen name="SignIn">
           {() => <SignIn onLogin={() => setIsLoggedIn(true)} />}
         </Stack.Screen>
-        <Stack.Screen name="SignUp" component={SignUp} />
+        <Stack.Screen name="SignUp">
+          {() => <SignUp onSignUp={() => setIsLoggedIn(true)} />}
+        </Stack.Screen>
         <Stack.Screen 
           name="Onboarding" 
           options={{ headerShown: false }}
@@ -77,6 +90,14 @@ export default function RootLayout() {
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
+        headerStyle: {
+          backgroundColor: '#4CAF50',
+        },
+        headerTintColor: '#fff',
+        headerTitleStyle: {
+          fontWeight: 'bold',
+        },
+
         tabBarIcon: ({ color, size }) => {
           let iconName: "home" | "information-circle" | "person-circle" | "chatbubbles" |'map'| "mic" = "home";
   
@@ -105,14 +126,23 @@ export default function RootLayout() {
         },
         tabBarActiveTintColor: '#4CAF50',
         tabBarInactiveTintColor: 'gray',
+        tabBarHideOnKeyboard: true,
         tabBarStyle: {
           backgroundColor: '#f8f8f8',
           borderTopWidth: 0,
-          elevation: 50,
+          elevation: 8,
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.2,
+          shadowRadius: 2,
+          height: 65,
+          paddingBottom: 10,
         },
+        
         tabBarLabelStyle: {
           fontSize: 12,
           fontWeight: 'bold',
+          marginBottom: 5,
         },
       })}
     >

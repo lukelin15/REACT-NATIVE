@@ -22,6 +22,8 @@ interface OnboardingProps {
 
 export default function Onboarding({ setIsLoggedIn }: OnboardingProps) {
   const navigation = useNavigation<OnboardingScreenNavigationProp>();
+  const [currentStep, setCurrentStep] = useState(1);
+  const totalSteps = 3;
 
   const [selectedPreferences, setSelectedPreferences] = useState<string[]>([]);
   const [selectedAllergies, setSelectedAllergies] = useState<string[]>([]);
@@ -92,111 +94,228 @@ export default function Onboarding({ setIsLoggedIn }: OnboardingProps) {
     }
   };
 
+  const renderProgressBar = () => {
+    return (
+      <View style={styles.progressContainer}>
+        <View style={styles.progressBar}>
+          <View style={[styles.progressFill, { width: `${(currentStep / totalSteps) * 100}%` }]} />
+        </View>
+        <Text style={styles.progressText}>{currentStep}/{totalSteps}</Text>
+      </View>
+    );
+  };
+
+  const renderCurrentSection = () => {
+    switch (currentStep) {
+      case 1:
+        return (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Dietary Preferences</Text>
+            <Text style={styles.sectionDescription}>
+              Select any dietary restrictions or preferences you follow. This helps us recommend suitable food options.
+            </Text>
+            <View style={styles.selectionCounter}>
+              <Text style={styles.counterText}>
+                {selectedPreferences.length} selected
+              </Text>
+            </View>
+            <View style={styles.buttonContainer}>
+              {preferences.map((pref) => (
+                <TouchableOpacity 
+                  key={pref}
+                  style={[styles.button, selectedPreferences.includes(pref) && styles.selectedButton]}
+                  onPress={() => toggleSelection(pref, selectedPreferences, setSelectedPreferences)}
+                >
+                  <Text style={[styles.buttonText, selectedPreferences.includes(pref) && styles.selectedText]}>
+                    {pref}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            <TextInput 
+              style={styles.input} 
+              placeholder="Other dietary preference" 
+              value={otherPreference} 
+              onChangeText={setOtherPreference} 
+            />
+          </View>
+        );
+      case 2:
+        return (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Allergies</Text>
+            <Text style={styles.sectionDescription}>
+              Let us know about any food allergies you have. We'll make sure to warn you about dishes containing these ingredients.
+            </Text>
+            <View style={styles.selectionCounter}>
+              <Text style={styles.counterText}>
+                {selectedAllergies.length} selected
+              </Text>
+            </View>
+            <View style={styles.buttonContainer}>
+              {allergies.map((allergy) => (
+                <TouchableOpacity 
+                  key={allergy}
+                  style={[styles.button, selectedAllergies.includes(allergy) && styles.selectedButton]}
+                  onPress={() => toggleSelection(allergy, selectedAllergies, setSelectedAllergies)}
+                >
+                  <Text style={[styles.buttonText, selectedAllergies.includes(allergy) && styles.selectedText]}>
+                    {allergy}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            <TextInput 
+              style={styles.input} 
+              placeholder="Other allergy" 
+              value={otherAllergy} 
+              onChangeText={setOtherAllergy} 
+            />
+          </View>
+        );
+      case 3:
+        return (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Cuisine Preferences</Text>
+            <Text style={styles.sectionDescription}>
+              Choose your favorite cuisines. We'll prioritize showing you dishes from these culinary traditions.
+            </Text>
+            <View style={styles.selectionCounter}>
+              <Text style={styles.counterText}>
+                {selectedCuisines.length} selected
+              </Text>
+            </View>
+            <View style={styles.buttonContainer}>
+              {cuisines.map((cuisine) => (
+                <TouchableOpacity 
+                  key={cuisine}
+                  style={[styles.button, selectedCuisines.includes(cuisine) && styles.selectedButton]}
+                  onPress={() => toggleSelection(cuisine, selectedCuisines, setSelectedCuisines)}
+                >
+                  <Text style={[styles.buttonText, selectedCuisines.includes(cuisine) && styles.selectedText]}>
+                    {cuisine}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            <TextInput 
+              style={styles.input} 
+              placeholder="Other cuisine preference" 
+              value={otherCuisine} 
+              onChangeText={setOtherCuisine} 
+            />
+          </View>
+        );
+      default:
+        return null;
+    }
+  };
+
+  const handleNext = () => {
+    if (currentStep < totalSteps) {
+      setCurrentStep(currentStep + 1);
+    } else {
+      handleSave();
+    }
+  };
+
+  const handleBack = () => {
+    if (currentStep > 1) {
+      setCurrentStep(currentStep - 1);
+    }
+  };
+
   return (
-    <ScrollView style={styles.container}>
-      {/* Header Section */}
-      <View style={styles.headerContainer}>
-        <Text style={styles.mainTitle}>Onboarding Survey</Text>
-        <Text style={styles.description}>
-          Tell us about your dietary needs and preferences to help us recommend the best food options for you.
-        </Text>
-      </View>
-
-      {/* Display User Location */}
-      {location && (
-        <Text style={styles.locationText}>
-          📍 Your Location: {location.latitude}, {location.longitude}
-        </Text>
-      )}
-
-      {/* Dietary Preferences Section */}
-      <Text style={styles.sectionTitle}>Dietary Preferences</Text>
-      <View style={styles.buttonContainer}>
-        {preferences.map((pref) => (
-          <TouchableOpacity 
-            key={pref}
-            style={[styles.button, selectedPreferences.includes(pref) && styles.selectedButton]}
-            onPress={() => toggleSelection(pref, selectedPreferences, setSelectedPreferences)}
-          >
-            <Text style={[styles.buttonText, selectedPreferences.includes(pref) && styles.selectedText]}>
-              {pref}
-            </Text>
+    <View style={styles.container}>
+      {renderProgressBar()}
+      <ScrollView style={styles.scrollContainer}>
+        {renderCurrentSection()}
+      </ScrollView>
+      <View style={styles.navigationButtons}>
+        {currentStep > 1 && (
+          <TouchableOpacity onPress={handleBack} style={styles.backButton}>
+            <Text style={styles.backButtonText}>Back</Text>
           </TouchableOpacity>
-        ))}
+        )}
+        <TouchableOpacity 
+          onPress={handleNext} 
+          style={[styles.nextButton, currentStep === totalSteps && styles.saveButton]}
+        >
+          <Text style={styles.nextButtonText}>
+            {currentStep === totalSteps ? 'Save' : 'Next'}
+          </Text>
+        </TouchableOpacity>
       </View>
-      <TextInput style={styles.input} placeholder="Other dietary preference" value={otherPreference} onChangeText={setOtherPreference} />
-
-      {/* Allergies Section */}
-      <Text style={styles.sectionTitle}>Allergies</Text>
-      <View style={styles.buttonContainer}>
-        {allergies.map((allergy) => (
-          <TouchableOpacity 
-            key={allergy}
-            style={[styles.button, selectedAllergies.includes(allergy) && styles.selectedButton]}
-            onPress={() => toggleSelection(allergy, selectedAllergies, setSelectedAllergies)}
-          >
-            <Text style={[styles.buttonText, selectedAllergies.includes(allergy) && styles.selectedText]}>
-              {allergy}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-      <TextInput style={styles.input} placeholder="Other allergy" value={otherAllergy} onChangeText={setOtherAllergy} />
-
-      {/* Cuisine Preferences Section */}
-      <Text style={styles.sectionTitle}>Cuisine Preferences</Text>
-      <View style={styles.buttonContainer}>
-        {cuisines.map((cuisine) => (
-          <TouchableOpacity 
-            key={cuisine}
-            style={[styles.button, selectedCuisines.includes(cuisine) && styles.selectedButton]}
-            onPress={() => toggleSelection(cuisine, selectedCuisines, setSelectedCuisines)}
-          >
-            <Text style={[styles.buttonText, selectedCuisines.includes(cuisine) && styles.selectedText]}>
-              {cuisine}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-      <TextInput style={styles.input} placeholder="Other cuisine preference" value={otherCuisine} onChangeText={setOtherCuisine} />
-
-      {/* Save Button */}
-      <TouchableOpacity onPress={handleSave} style={styles.saveButton}>
-        <Text style={styles.saveButtonText}>Save Preferences</Text>
-      </TouchableOpacity>
-    </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#FFE5D9',
+  },
+  scrollContainer: {
+    flex: 1,
     padding: 20,
-    backgroundColor: '#f8f8f8',
   },
-  headerContainer: {
-    alignItems: 'center',
-    marginBottom: 20,
-    marginTop: 50
+  progressContainer: {
+    padding: 20,
+    paddingTop: 50,
   },
-  mainTitle: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#4CAF50',
-    textAlign: 'center',
+  progressBar: {
+    height: 8,
+    backgroundColor: '#FFD5C2',
+    borderRadius: 4,
+    overflow: 'hidden',
   },
-  description: {
-    fontSize: 16,
-    color: '#666',
-    textAlign: 'center',
+  progressFill: {
+    height: '100%',
+    backgroundColor: '#4CAF50',
+  },
+  progressText: {
+    textAlign: 'right',
     marginTop: 5,
-    paddingHorizontal: 10,
+    color: '#666',
+  },
+  section: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 15,
+    padding: 20,
+    marginBottom: 20,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   sectionTitle: {
-    fontSize: 22,
+    fontSize: 24,
     fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 10,
+  },
+  sectionDescription: {
+    fontSize: 16,
+    color: '#666',
+    marginBottom: 20,
+    lineHeight: 22,
+  },
+  selectionCounter: {
+    backgroundColor: '#F0F9F0',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    marginBottom: 15,
+    alignSelf: 'flex-start',
+  },
+  counterText: {
     color: '#4CAF50',
-    marginVertical: 15,
+    fontWeight: '600',
+    fontSize: 14,
   },
   buttonContainer: {
     flexDirection: 'row',
@@ -214,51 +333,84 @@ const styles = StyleSheet.create({
   },
   selectedButton: {
     backgroundColor: '#4CAF50',
+    borderColor: '#4CAF50',
+    shadowColor: '#4CAF50',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.2,
+    shadowRadius: 3,
+    elevation: 2,
   },
   buttonText: {
     color: '#333',
   },
   selectedText: {
     color: '#fff',
+    fontWeight: '600',
   },
   input: {
     width: '100%',
     padding: 12,
     marginTop: 10,
     borderWidth: 1,
-    borderColor: '#ccc',
+    borderColor: '#E0E0E0',
     borderRadius: 10,
     backgroundColor: '#f9f9f9',
+    fontSize: 16,
+  },
+  navigationButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    padding: 20,
+    backgroundColor: '#FFFFFF',
+    borderTopWidth: 1,
+    borderTopColor: '#eee',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: -3,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  backButton: {
+    paddingVertical: 15,
+    paddingHorizontal: 30,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#4CAF50',
+  },
+  backButtonText: {
+    color: '#4CAF50',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  nextButton: {
+    flex: 1,
+    marginLeft: 10,
+    backgroundColor: '#4CAF50',
+    paddingVertical: 15,
+    borderRadius: 10,
+    alignItems: 'center',
+    shadowColor: '#4CAF50',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.2,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  nextButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
   saveButton: {
-    marginTop: 30,
     backgroundColor: '#4CAF50',
-    paddingVertical: 15,
-    borderRadius: 10,
-    alignItems: 'center',
-  },
-  saveButtonText: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  locationButton: {
-    marginTop: 20,
-    backgroundColor: '#4CAF50',
-    paddingVertical: 15,
-    borderRadius: 10,
-    alignItems: 'center',
-  },
-  locationButtonText: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  locationText: {
-    marginTop: 10,
-    fontSize: 16,
-    color: '#333',
-    textAlign: 'center',
   },
 });
 

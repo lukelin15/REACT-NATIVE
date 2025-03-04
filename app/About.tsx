@@ -1,101 +1,141 @@
 import React from 'react';
-import { Text, View, StyleSheet, Image, TouchableOpacity, ScrollView, Dimensions } from "react-native";
+import { Text, View, StyleSheet, TouchableOpacity, ScrollView, Dimensions } from "react-native";
+import { MaterialIcons } from '@expo/vector-icons';
 
 export default function About() {
-  return (
-    <ScrollView contentContainerStyle={styles.scrollContainer}>
-      <View style={styles.container}>
-        <Image source={require('../assets/images/team.png')} style={styles.image} />
-        <Text style={styles.title}>About This App</Text>
-        <Text style={styles.description}>
-          This app is a Grocery Shopping List Recommendation System designed to help you optimize your grocery shopping by providing recommendations based on your shopping list. Using geo-mapping and location services, we ensure you get the best prices and the most convenient locations for your shopping needs.
-        </Text>
+  const currentYear = new Date().getFullYear();
 
-        <View style={styles.teamSection}>
-          <Text style={styles.teamTitle}>Meet The Team</Text>
-          <View style={styles.teamList}>
-            <Text style={styles.teamMember}>Luke</Text>
-            <Text style={styles.teamMember}>Matteo</Text>
-            <Text style={styles.teamMember}>Yi</Text>
-            <Text style={styles.teamMember}>Jessica</Text>
+  return (
+    <ScrollView style={styles.scrollView}>
+      <View style={styles.container}>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Overview</Text>
+          <Text style={styles.description}>
+            This app is a Grocery Shopping List Recommendation System designed to help you optimize your grocery shopping by providing recommendations based on your shopping list. Using geo-mapping and location services, we ensure you get the best prices and the most convenient locations for your shopping needs.
+          </Text>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Development Team</Text>
+          <View style={styles.teamContainer}>
+            {[
+              { name: 'Luke', role: 'UI/UX Designer' },
+              { name: 'Matteo', role: 'Backend Developer' },
+              { name: 'Yi', role: 'Backend Developer' },
+              { name: 'Jessica', role: 'Backend Developer' }
+            ].map((member) => (
+              <View key={member.name} style={styles.teamMember}>
+                <View style={styles.memberInfo}>
+                  <Text style={styles.memberName}>{member.name}</Text>
+                  <Text style={styles.memberRole}>{member.role}</Text>
+                </View>
+              </View>
+            ))}
           </View>
         </View>
 
-        <TouchableOpacity style={styles.contactButton}>
-          <Text style={styles.contactButtonText}>Contact Us</Text>
-        </TouchableOpacity>
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Contact</Text>
+          <TouchableOpacity style={styles.contactItem}>
+            <MaterialIcons name="email" size={20} color="#555" />
+            <Text style={styles.contactText}>support@groceryapp.com</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.contactItem}>
+            <MaterialIcons name="phone" size={20} color="#555" />
+            <Text style={styles.contactText}>+1 (555) 123-4567</Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.footer}>
+          <Text style={styles.footerText}>Version 1.0.0</Text>
+          <Text style={styles.footerText}>© {currentYear} Grocery Assistant</Text>
+        </View>
       </View>
     </ScrollView>
   );
 }
 
-// Get screen width dynamically
 const { width } = Dimensions.get('window');
 
 const styles = StyleSheet.create({
-  scrollContainer: {
-    flexGrow: 1,
-    paddingBottom: 20,
+  scrollView: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
   },
   container: {
     flex: 1,
-    padding: 20,
-    backgroundColor: '#f4f4f4',
-    alignItems: 'center', // Centers content for better alignment
+    padding: 24,
   },
-  image: {
-    width: width * 0.9,  // Adjusts dynamically based on screen size
-    height: 200,
-    resizeMode: 'cover',
-    borderRadius: 10,
-    marginBottom: 20,
+  header: {
+    marginBottom: 40,
   },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#2E8B57',
-    marginBottom: 10,
-    textAlign: 'center',
+  headerTitle: {
+    fontSize: 34,
+    fontWeight: '700',
+    color: '#1a1a1a',
+    marginBottom: 2,
+  },
+  headerSubtitle: {
+    fontSize: 18,
+    color: '#666',
+    fontWeight: '500',
+  },
+  section: {
+    paddingBottom: 24,
+  },
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#1a1a1a',
+    marginBottom: 16,
   },
   description: {
     fontSize: 16,
-    color: '#666',
     lineHeight: 24,
-    marginBottom: 20,
-    textAlign: 'center',
-    paddingHorizontal: 10,
+    color: '#444',
   },
-  teamSection: {
-    marginBottom: 20,
-    width: '100%',
-    alignItems: 'center',
-  },
-  teamTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#2E8B57',
-    marginBottom: 10,
-  },
-  teamList: {
-    alignItems: 'center',
+  teamContainer: {
+    marginTop: 8,
   },
   teamMember: {
-    fontSize: 16,
-    color: '#555',
-    marginBottom: 5,
-  },
-  contactButton: {
-    backgroundColor: '#2E8B57',
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 30,
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    width: width * 0.6, // Makes button width dynamic
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
   },
-  contactButtonText: {
-    color: '#fff',
+  memberInfo: {
+    flex: 1,
+  },
+  memberName: {
+    fontSize: 17,
+    fontWeight: '600',
+    color: '#1a1a1a',
+    marginBottom: 4,
+  },
+  memberRole: {
+    fontSize: 14,
+    color: '#666',
+  },
+  contactItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 3,
+  },
+  contactText: {
     fontSize: 16,
-    fontWeight: 'bold',
+    color: '#444',
+    marginLeft: 12,
+  },
+  footer: {
+    paddingTop: 24,
+    borderTopWidth: 1,
+  },
+  footerText: {
+    fontSize: 14,
+    color: '#888',
+    textAlign: 'center',
+    marginBottom: 4,
   },
 });
