@@ -15,8 +15,6 @@ export default function Chat() {
   const [destination, setDestination] = useState<string>("");
   const [waypoints, setWaypoints] = useState<string[]>([]);
   const [showGenerateButton, setShowGenerateButton] = useState(false);
-
-  const [showGenerateButton, setShowGenerateButton] = useState(false);
   const scrollViewRef = useRef<ScrollView | null>(null);
 
   const stripMarkdown = (text: string) => {
@@ -169,12 +167,14 @@ export default function Chat() {
             ))}
           </ScrollView>
 
+ 
       {showGenerateButton && (
-            <View style={styles.bottomContainer}>
-            <TouchableOpacity onPress={generateShoppingList} style={styles.generateButton}>
-                <Text style={styles.generateButtonText}>Generate Shopping List</Text>
-              </TouchableOpacity>
-      )}
+        <View style={styles.bottomContainer}>
+        <TouchableOpacity onPress={generateShoppingList} style={styles.generateButton}>
+        <Text style={styles.generateButtonText}>Generate Shopping List</Text>
+        </TouchableOpacity>
+         </View> 
+  )}
 
             <View style={styles.inputContainer}>
               <TextInput 
@@ -192,7 +192,6 @@ export default function Chat() {
               </TouchableOpacity>
             </View>
           </View>
-        </View>
 
         {/* Keep Modal at the end */}
         <Modal visible={modalVisible} animationType="slide" transparent onRequestClose={() => setModalVisible(false)}>
@@ -220,11 +219,7 @@ export default function Chat() {
                   ))}
                 </>
               )}
-
-              <TouchableOpacity onPress={addItemToShoppingList} style={styles.addButton}>
-                <Text style={styles.addButtonText}>Add Item</Text>
-              </TouchableOpacity>
-
+              
               {storeAddresses.length > 0 && (
                 <TouchableOpacity 
                   onPress={() => setModalVisible(false)} // Close modal before opening route planner
