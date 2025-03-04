@@ -1,13 +1,38 @@
-import React, { useState, useRef } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert, ActivityIndicator, Modal, KeyboardAvoidingView, Platform, SafeAreaView, Keyboard } from 'react-native';
+import React, { useState, useRef, useEffect } from 'react';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert, ActivityIndicator, Modal, KeyboardAvoidingView, Platform, SafeAreaView, Keyboard, Animated } from 'react-native';
 import { auth } from '@/lib/firebase';
 import RoutePlanner from './Route';
 
+interface Store {
+  name: string;
+  address: string;
+  available_items: string[];
+}
+
+interface StoreRecommendations {
+  stores: Store[];
+}
+
+interface ShoppingItem {
+  name: string;
+  price: number;
+}
+
+interface ShoppingListResponse {
+  items: ShoppingItem[];
+  store_recommendations: StoreRecommendations;
+}
 
 export default function Chat() {
   const [messages, setMessages] = useState([{ sender: "Bot", text: "Hi! How can I help you today?" }]);
   const [input, setInput] = useState("");
-  const [shoppingList, setShoppingList] = useState(null);
+  const [isTyping, setIsTyping] = useState(false);
+  const [dotAnimations] = useState([
+    new Animated.Value(0),
+    new Animated.Value(0),
+    new Animated.Value(0)
+  ]);
+  const [shoppingList, setShoppingList] = useState<ShoppingListResponse | null>(null);
   const [loadingList, setLoadingList] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [storeAddresses, setStoreAddresses] = useState<string[]>([]);
@@ -15,32 +40,98 @@ export default function Chat() {
   const [destination, setDestination] = useState<string>("");
   const [waypoints, setWaypoints] = useState<string[]>([]);
   const [showGenerateButton, setShowGenerateButton] = useState(false);
+  const [userToken, setUserToken] = useState<string | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
   const scrollViewRef = useRef<ScrollView | null>(null);
+
+  useEffect(() => {
+    const setupUser = async () => {
+      const user = auth.currentUser;
+      if (user) {
+        const token = await user.getIdToken();
+        setUserToken(token);
+        setUserId('Y84O1MLwhMRTUISOeKHHJucdCBq2');
+      }
+    };
+    setupUser();
+  }, []);
+
+  useEffect(() => {
+    if (isTyping) {
+      const animations = dotAnimations.map((dot, index) => {
+        return Animated.sequence([
+          Animated.delay(index * 200),
+          Animated.loop(
+            Animated.sequence([
+              Animated.timing(dot, {
+                toValue: 1,
+                duration: 400,
+                useNativeDriver: true,
+              }),
+              Animated.timing(dot, {
+                toValue: 0,
+                duration: 400,
+                useNativeDriver: true,
+              }),
+            ])
+          ),
+        ]);
+      });
+      Animated.parallel(animations).start();
+    } else {
+      dotAnimations.forEach(dot => dot.setValue(0));
+    }
+  }, [isTyping]);
 
   const stripMarkdown = (text: string) => {
     return text
+      // Remove markdown headers
+      .replace(/^###\s+/gm, '')
+      // Remove bold and italic
       .replace(/\*\*(.*?)\*\*/g, '$1')
       .replace(/\*(.*?)\*/g, '$1')
+      // Remove code blocks
       .replace(/```(.*?)```/gs, '$1')
       .replace(/`(.*?)`/g, '$1')
-      .replace(/\[(.*?)\]\((.*?)\)/g, '$1');
+      // Remove links
+      .replace(/\[(.*?)\]\((.*?)\)/g, '$1')
+      // Remove bullet points
+      .replace(/^\s*-\s+/gm, '• ')
+      // Remove extra newlines
+      .replace(/\n{3,}/g, '\n\n')
+      // Trim whitespace
+      .trim();
+  };
+
+  const formatMessage = (text: string) => {
+    // Split the text into sections based on double newlines
+    const sections = text.split('\n\n');
+    
+    return sections.map((section, index) => {
+      // If section starts with a bullet point, format it as a list
+      if (section.startsWith('•')) {
+        return section.split('\n').map(line => line.trim()).join('\n');
+      }
+      // Otherwise, return the section as is
+      return section.trim();
+    }).join('\n\n');
   };
 
   const sendMessageToBackend = async (userMessage: string) => {
     try {
-      const user = auth.currentUser;
-      if (!user) {
+      if (!userId || !userToken) {
         Alert.alert("Authentication Error", "You must be logged in to chat.");
         return "You need to sign in first.";
       }
 
-      const token = await user.getIdToken();
-      const uid = user.uid;
-
-      const response = await fetch("http://localhost:8002/chat", {
+      const response = await fetch("https://d375-2601-646-8f80-1110-4c4c-830b-652-52a4.ngrok-free.app/chat", {
         method: "POST",
-        headers: { "Authorization": `Bearer ${token}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ uid, message: userMessage }),
+        headers: new Headers({
+          "Authorization": `Bearer ${userToken}`, 
+          "Content-Type": "application/json",
+          "ngrok-skip-browser-warning": "69420"
+        }),
+        body: JSON.stringify({ uid: userId, message: userMessage }),
       });
 
       if (!response.ok) throw new Error("Failed to fetch response from AI.");
@@ -58,8 +149,10 @@ export default function Chat() {
     if (input.trim()) {
       setMessages(prev => [...prev, { sender: "User", text: input }]);
       setInput("");
+      setIsTyping(true);
       const botResponse = await sendMessageToBackend(input);
-      setMessages(prev => [...prev, { sender: "Bot", text: botResponse }]);
+      setIsTyping(false);
+      setMessages(prev => [...prev, { sender: "Bot", text: formatMessage(stripMarkdown(botResponse)) }]);
       setShowGenerateButton(true);
       setTimeout(() => scrollViewRef.current?.scrollToEnd({ animated: true }), 100);
     }
@@ -71,29 +164,56 @@ export default function Chat() {
       setModalVisible(true);
       setShowGenerateButton(false);
 
-      const user = auth.currentUser;
-      if (!user) {
+      if (!userId || !userToken) {
         Alert.alert("Authentication Error", "You must be logged in.");
         setLoadingList(false);
         setModalVisible(false);
         return;
       }
 
-      const token = await user.getIdToken();
-      const uid = user.uid;
-
-      const response = await fetch(`http://localhost:8002/generate-shopping-list/${uid}`, {
+      const response = await fetch(`https://d375-2601-646-8f80-1110-4c4c-830b-652-52a4.ngrok-free.app/generate-shopping-list/${userId}`, {
         method: "GET",
-        headers: { "Authorization": `Bearer ${token}`, "Content-Type": "application/json" },
+        headers: new Headers({
+          "Authorization": `Bearer ${userToken}`, 
+          "Content-Type": "application/json",
+          "Accept": "application/json",
+          "ngrok-skip-browser-warning": "69420"
+        }),
       });
 
-      if (!response.ok) throw new Error("Failed to fetch shopping list.");
+      console.log("Response status:", response.status);
+      console.log("Response headers:", JSON.stringify(Object.fromEntries(response.headers.entries()), null, 2));
 
-      const data = await response.json();
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("Server error response:", errorText);
+        throw new Error(`Failed to fetch shopping list: ${response.status}`);
+      }
+
+      // Try to parse the response as JSON
+      const responseText = await response.text();
+      console.log("Raw response:", responseText); // Debug log
+      
+      let data: ShoppingListResponse;
+      try {
+        data = JSON.parse(responseText) as ShoppingListResponse;
+        console.log("Parsed data:", JSON.stringify(data, null, 2));
+      } catch (parseError) {
+        console.error("JSON parse error:", parseError);
+        throw new Error("Invalid JSON response from server");
+      }
+      
+      // Validate the response data structure
+      if (!data || !data.items || !data.store_recommendations) {
+        console.error("Invalid data structure:", data);
+        throw new Error("Invalid response format from server");
+      }
+
       setShoppingList(data);
 
-      if (data.list_data?.store_recommendations?.stores) {
-        const extractedAddresses = data.list_data.store_recommendations.stores.map((store: any) => store.address);
+      if (data.store_recommendations.stores) {
+        const extractedAddresses = data.store_recommendations.stores.map(store => store.address);
+        console.log("Extracted addresses:", extractedAddresses);
         setStoreAddresses(extractedAddresses);
   
         if (extractedAddresses.length > 1) {
@@ -107,7 +227,7 @@ export default function Chat() {
 
     } catch (error) {
       console.error("Error generating shopping list:", error);
-      Alert.alert("Error", "Failed to generate shopping list. Please try again.");
+      Alert.alert("Error", "Failed to generate shopping list. Please try again later.");
     } finally {
       setLoadingList(false);
     }
@@ -115,27 +235,30 @@ export default function Chat() {
 
   const deleteItemFromShoppingList = async (itemName: string) => {
     try {
-      const user = auth.currentUser;
-      if (!user) {
+      if (!userId || !userToken) {
         Alert.alert("Authentication Error", "You must be logged in.");
         return;
       }
 
-      const token = await user.getIdToken();
-      const uid = user.uid;
-
-      const response = await fetch(`http://localhost:8002/shopping-list/${uid}/delete-item/${encodeURIComponent(itemName)}`, {
+      const response = await fetch(`https://d375-2601-646-8f80-1110-4c4c-830b-652-52a4.ngrok-free.app/shopping-list/${userId}/delete-item/${encodeURIComponent(itemName)}`, {
         method: "DELETE",
-        headers: { "Authorization": `Bearer ${token}`, "Content-Type": "application/json" },
+        headers: new Headers({
+          "Authorization": `Bearer ${userToken}`, 
+          "Content-Type": "application/json",
+          "ngrok-skip-browser-warning": "69420"
+        }),
       });
 
       if (!response.ok) throw new Error("Failed to delete item.");
 
       // Remove only the selected item from the frontend state
-      setShoppingList(prevList => ({
-        ...prevList,
-        items: prevList.items.filter(item => item.name !== itemName)
-      }));
+      setShoppingList(prevList => {
+        if (!prevList) return null;
+        return {
+          ...prevList,
+          items: prevList.items.filter(item => item.name !== itemName)
+        };
+      });
 
       Alert.alert("Success", `Item '${itemName}' removed successfully`);
     } catch (error) {
@@ -165,6 +288,29 @@ export default function Chat() {
                 <Text style={[styles.messageText, message.sender === "User" ? styles.userMessageText : styles.botMessageText]}>{stripMarkdown(message.text)}</Text>
               </View>
             ))}
+            {isTyping && (
+              <View style={[styles.messageBubble, styles.botMessage, styles.typingIndicator]}>
+                <View style={styles.typingDots}>
+                  {dotAnimations.map((dot, index) => (
+                    <Animated.View
+                      key={index}
+                      style={[
+                        styles.typingDot,
+                        {
+                          transform: [{
+                            translateY: dot.interpolate({
+                              inputRange: [0, 1],
+                              outputRange: [0, -5]
+                            })
+                          }],
+                          opacity: dot
+                        }
+                      ]}
+                    />
+                  ))}
+                </View>
+              </View>
+            )}
           </ScrollView>
 
  
@@ -197,41 +343,88 @@ export default function Chat() {
         <Modal visible={modalVisible} animationType="slide" transparent onRequestClose={() => setModalVisible(false)}>
           <View style={styles.modalContainer}>
             <View style={styles.modalContent}>
-              <Text style={styles.listTitle}>Shopping List</Text>
-              {loadingList ? (
-                <ActivityIndicator size="large" color="#2E8B57" />
-              ) : (
-                <>
-                  <Text style={styles.listSubtitle}>Locations:</Text>
-                  {shoppingList?.locations.map((location, index) => (
-                    <Text key={index} style={styles.listItem}>- {location}</Text>
-                  ))}
-                  <Text style={styles.listSubtitle}>Items:</Text>
-                  {shoppingList?.items.map((item, index) => (
-                    <View key={index} style={styles.listItemContainer}>
-                      <Text style={styles.listItemText}>
-                        {item.name} - ${item.price.toFixed(2)} ({item.location})
-                      </Text>
-                      <TouchableOpacity onPress={() => deleteItemFromShoppingList(item.name)} style={styles.deleteButton}>
-                        <Text style={styles.deleteButtonText}>✕</Text>
-                      </TouchableOpacity>
+              <ScrollView style={styles.modalScrollView} contentContainerStyle={styles.modalScrollContent}>
+                <View style={styles.receiptHeader}>
+                  <Text style={styles.receiptTitle}>Shopping Receipt</Text>
+                  <Text style={styles.receiptDate}>{new Date().toLocaleDateString()}</Text>
+                </View>
+                
+                <View style={styles.receiptDivider} />
+                
+                {loadingList ? (
+                  <ActivityIndicator size="large" color="#2E8B57" />
+                ) : (
+                  <>
+                    <View style={styles.receiptSection}>
+                      <Text style={styles.receiptSectionTitle}>Items</Text>
+                      {shoppingList?.items.map((item, index) => (
+                        <View key={index} style={styles.receiptItem}>
+                          <Text style={styles.receiptItemName}>{item.name}</Text>
+                          <Text style={styles.receiptItemPrice}>${item.price.toFixed(2)}</Text>
+                        </View>
+                      ))}
+                      <View style={styles.receiptDivider} />
+                      <View style={styles.receiptTotal}>
+                        <Text style={styles.receiptTotalText}>Total</Text>
+                        <Text style={styles.receiptTotalAmount}>
+                          ${shoppingList?.items.reduce((sum, item) => sum + item.price, 0).toFixed(2)}
+                        </Text>
+                      </View>
                     </View>
-                  ))}
-                </>
-              )}
-              
-              {storeAddresses.length > 0 && (
-                <TouchableOpacity 
-                  onPress={() => setModalVisible(false)} // Close modal before opening route planner
-                  style={styles.routeButton}
-                >
-                  <Text style={styles.routeButtonText}>Show Route</Text>
-                </TouchableOpacity>
-              )}
 
-              <TouchableOpacity onPress={() => setModalVisible(false)} style={styles.closeButton}>
-                <Text style={styles.closeButtonText}>Close</Text>
-              </TouchableOpacity>
+                    <View style={styles.receiptSection}>
+                      <Text style={styles.receiptSectionTitle}>Available At</Text>
+                      {shoppingList?.store_recommendations.stores.map((store, index) => (
+                        <View key={index} style={styles.storeItem}>
+                          <Text style={styles.storeName}>{store.name}</Text>
+                          <Text style={styles.storeAddress}>{store.address}</Text>
+                        </View>
+                      ))}
+                    </View>
+                  </>
+                )}
+              </ScrollView>
+              
+              <View style={styles.receiptFooter}>
+                <View style={styles.buttonContainer}>
+                  {loadingList ? (
+                    <TouchableOpacity 
+                      onPress={() => setModalVisible(false)} 
+                      style={[styles.closeButton, styles.flexButton]}
+                    >
+                      <Text style={styles.closeButtonText}>Close</Text>
+                    </TouchableOpacity>
+                  ) : (
+                    <>
+                      {storeAddresses.length > 0 && (
+                        <TouchableOpacity 
+                          onPress={() => setModalVisible(false)}
+                          style={[styles.routeButton, styles.flexButton]}
+                        >
+                          <Text style={styles.routeButtonText}>Route</Text>
+                        </TouchableOpacity>
+                      )}
+
+                      <TouchableOpacity 
+                        onPress={() => {
+                          Alert.alert("Success", "Your order has been placed!");
+                          setModalVisible(false);
+                        }} 
+                        style={[styles.checkoutButton, styles.flexButton]}
+                      >
+                        <Text style={styles.checkoutButtonText}>Checkout</Text>
+                      </TouchableOpacity>
+
+                      <TouchableOpacity 
+                        onPress={() => setModalVisible(false)} 
+                        style={[styles.closeButton, styles.flexButton]}
+                      >
+                        <Text style={styles.closeButtonText}>Close</Text>
+                      </TouchableOpacity>
+                    </>
+                  )}
+                </View>
+              </View>
             </View>
           </View>
         </Modal>
@@ -246,52 +439,270 @@ export default function Chat() {
 
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 20, backgroundColor: "#f7f7f7" },
-  title: { fontSize: 20, fontWeight: 'bold', color: "#2E8B57", marginBottom: 10, textAlign: 'center' },
-  chatContainer: { flex: 1, marginBottom: 20 },
-  messageBubble: { padding: 12, marginVertical: 8, maxWidth: '75%', borderRadius: 20, marginHorizontal: 10 },
-  userMessage: { backgroundColor: "#2E8B57", alignSelf: 'flex-end' },
-  botMessage: { backgroundColor: "#D1E7DD", alignSelf: 'flex-start' },
-  messageText: { fontSize: 16, lineHeight: 22 },
-  generateButton: { backgroundColor: "#FFA500", paddingVertical: 12, borderRadius: 20, justifyContent: 'center', alignItems: 'center', marginBottom: 10 },
-  generateButtonText: { color: "#fff", fontSize: 16, fontWeight: 'bold' },
-  modalContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: "rgba(0,0,0,0.5)" },
-  modalContent: { backgroundColor: "#fff", padding: 20, borderRadius: 10, width: '80%' },
-  listTitle: { fontSize: 18, fontWeight: "bold", marginBottom: 10 },
-  listItem: { fontSize: 16, marginBottom: 5 },
-  listItemContainer: { flexDirection: 'row', alignItems: 'center', marginBottom: 10, position: 'relative' },
-  itemInput: { flex: 1, backgroundColor: "#fff", padding: 10, borderRadius: 10, borderWidth: 1, borderColor: "#2E8B57", marginHorizontal: 5 },
-  removeButton: { position: 'absolute', left: -30, backgroundColor: "#FF4C4C", padding: 8, borderRadius: 50, width: 30, height: 30, justifyContent: "center", alignItems: "center" },
-  removeButtonText: { color: "#fff", fontSize: 18, fontWeight: "bold" },
-  inputContainer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  input: { height: 45, width: '85%', borderRadius: 30, backgroundColor: "#fff", paddingHorizontal: 15, borderColor: '#2E8B57', borderWidth: 1, fontSize: 16 },
-  sendButton: { backgroundColor: "#2E8B57", paddingVertical: 10, paddingHorizontal: 16, borderRadius: 20 },
-  sendButtonText: { color: "#fff", fontSize: 16, fontWeight: 'bold' },
-  addButton: { backgroundColor: "#2E8B57", padding: 12, borderRadius: 20, alignItems: 'center', marginTop: 10 },
-  addButtonText: { color: "#fff", fontSize: 16, fontWeight: 'bold' },
-
-  // Additional styles from the second code
-  tip: { 
-    position: 'absolute', 
-    bottom: 30, // Keeping the last assigned value
-    fontSize: 14, // Keeping the last assigned value
-    color: '#fff', 
+  safeArea: {
+    flex: 1,
+    backgroundColor: "#f7f7f7",
+  },
+  keyboardAvoidingView: {
+    flex: 1,
+  },
+  container: { 
+    flex: 1, 
+    backgroundColor: "#f7f7f7" 
+  },
+  chatContainer: { 
+    flex: 1,
+    paddingHorizontal: 20,
+  },
+  scrollViewContent: {
+    paddingBottom: 20,
+  },
+  messageBubble: { 
+    padding: 12, 
+    marginVertical: 8, 
+    maxWidth: '75%', 
+    borderRadius: 20, 
+    marginHorizontal: 10 
+  },
+  userMessage: { 
+    backgroundColor: "#2E8B57", 
+    alignSelf: 'flex-end' 
+  },
+  botMessage: { 
+    backgroundColor: "#D1E7DD", 
+    alignSelf: 'flex-start' 
+  },
+  messageText: { 
+    fontSize: 16, 
+    lineHeight: 22,
+    color: "#000"
+  },
+  userMessageText: {
+    color: "#fff"
+  },
+  botMessageText: {
+    color: "#000"
+  },
+  bottomContainer: {
+    paddingHorizontal: 20,
+    paddingBottom: 10,
+  },
+  generateButton: { 
+    backgroundColor: "#FFA500", 
+    paddingVertical: 12, 
+    borderRadius: 20, 
+    justifyContent: 'center', 
+    alignItems: 'center', 
+    marginBottom: 10 
+  },
+  generateButtonText: { 
+    color: "#fff", 
+    fontSize: 16, 
     fontWeight: 'bold' 
   },
-  featureItem: { 
-    backgroundColor: 'rgba(255, 255, 255, 0.1)', 
-    borderRadius: 15, 
-    padding: 20, 
-    marginBottom: 30 // Keeping the last assigned value
-  },
-  featureIcon: { fontSize: 32 },
-  scrollContent: { paddingBottom: 350 }, // Keeping the last assigned value
-  scrollIndicator: { 
+  inputContainer: { 
+    flexDirection: 'row', 
     alignItems: 'center', 
-    marginTop: 0, // Keeping the last assigned value
-    marginBottom: 10, 
-    paddingVertical: 8, 
-    backgroundColor: 'rgba(255, 255, 255, 0.1)' 
-  }
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    backgroundColor: "#fff",
+    borderTopWidth: 1,
+    borderTopColor: "#e0e0e0"
+  },
+  input: { 
+    height: 45, 
+    width: '85%', 
+    borderRadius: 30, 
+    backgroundColor: "#fff", 
+    paddingHorizontal: 15, 
+    borderColor: '#2E8B57', 
+    borderWidth: 1, 
+    fontSize: 16 
+  },
+  sendButton: { 
+    backgroundColor: "#2E8B57", 
+    paddingVertical: 10, 
+    paddingHorizontal: 16, 
+    borderRadius: 20 
+  },
+  sendButtonText: { 
+    color: "#fff", 
+    fontSize: 16, 
+    fontWeight: 'bold' 
+  },
+  modalContainer: { 
+    flex: 1, 
+    justifyContent: 'center', 
+    alignItems: 'center', 
+    backgroundColor: "rgba(0,0,0,0.5)" 
+  },
+  modalContent: { 
+    backgroundColor: "#fff", 
+    padding: 20, 
+    borderRadius: 10, 
+    width: '90%',
+    maxHeight: '80%',
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  modalScrollView: {
+    flex: 1,
+  },
+  modalScrollContent: {
+    paddingBottom: 20,
+  },
+  receiptHeader: {
+    alignItems: 'center',
+    marginBottom: 15,
+  },
+  receiptTitle: {
+    fontSize: 24,
+    fontWeight: "bold",
+    color: "#2E8B57",
+    marginBottom: 5,
+  },
+  receiptDate: {
+    fontSize: 14,
+    color: "#666",
+  },
+  receiptDivider: {
+    height: 1,
+    backgroundColor: "#ddd",
+    marginVertical: 10,
+  },
+  receiptSection: {
+    marginBottom: 15,
+  },
+  receiptSectionTitle: {
+    fontSize: 18,
+    fontWeight: "600",
+    color: "#2E8B57",
+    marginBottom: 10,
+  },
+  receiptItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 5,
+    borderBottomWidth: 1,
+    borderBottomColor: "#f0f0f0",
+  },
+  receiptItemName: {
+    fontSize: 16,
+    flex: 1,
+    marginRight: 10,
+  },
+  receiptItemPrice: {
+    fontSize: 16,
+    fontWeight: "500",
+    color: "#2E8B57",
+  },
+  receiptTotal: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 10,
+    paddingTop: 10,
+    borderTopWidth: 2,
+    borderTopColor: "#2E8B57",
+  },
+  receiptTotalText: {
+    fontSize: 18,
+    fontWeight: "bold",
+  },
+  receiptTotalAmount: {
+    fontSize: 20,
+    fontWeight: "bold",
+    color: "#2E8B57",
+  },
+  storeItem: {
+    marginBottom: 10,
+    padding: 10,
+    backgroundColor: "#f8f8f8",
+    borderRadius: 5,
+  },
+  storeName: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#2E8B57",
+    marginBottom: 3,
+  },
+  storeAddress: {
+    fontSize: 14,
+    color: "#666",
+  },
+  receiptFooter: {
+    marginTop: 20,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: "#ddd",
+  },
+  buttonContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+  flexButton: {
+    flex: 1,
+  },
+  routeButton: {
+    backgroundColor: "#2E8B57",
+    padding: 12,
+    borderRadius: 20,
+    alignItems: 'center',
+  },
+  routeButtonText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: 'bold'
+  },
+  checkoutButton: {
+    backgroundColor: "#FFA500",
+    padding: 12,
+    borderRadius: 20,
+    alignItems: 'center',
+  },
+  checkoutButtonText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: 'bold'
+  },
+  closeButton: {
+    backgroundColor: "#FF4C4C",
+    padding: 12,
+    borderRadius: 20,
+    alignItems: 'center',
+  },
+  closeButtonText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: 'bold'
+  },
+  typingIndicator: {
+    padding: 8,
+    width: 60,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  typingDots: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  typingDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#2E8B57',
+    marginHorizontal: 2,
+  },
 });
 
