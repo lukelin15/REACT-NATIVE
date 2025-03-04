@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert, ActivityIndicator, Modal, KeyboardAvoidingView, Platform, SafeAreaView, Keyboard, Animated } from 'react-native';
 import { auth } from '@/lib/firebase';
-import RoutePlanner from './Route';
+import { computeOptimizedRoute } from './Route';
 
 interface Store {
   name: string;
@@ -124,7 +124,7 @@ export default function Chat() {
         return "You need to sign in first.";
       }
 
-      const response = await fetch("https://d375-2601-646-8f80-1110-4c4c-830b-652-52a4.ngrok-free.app/chat", {
+      const response = await fetch("http://192.168.1.9:8002/chat", {
         method: "POST",
         headers: new Headers({
           "Authorization": `Bearer ${userToken}`, 
@@ -171,7 +171,7 @@ export default function Chat() {
         return;
       }
 
-      const response = await fetch(`https://d375-2601-646-8f80-1110-4c4c-830b-652-52a4.ngrok-free.app/generate-shopping-list/${userId}`, {
+      const response = await fetch(`http://192.168.1.9:8002/generate-shopping-list/${userId}`, {
         method: "GET",
         headers: new Headers({
           "Authorization": `Bearer ${userToken}`, 
@@ -240,7 +240,7 @@ export default function Chat() {
         return;
       }
 
-      const response = await fetch(`https://d375-2601-646-8f80-1110-4c4c-830b-652-52a4.ngrok-free.app/shopping-list/${userId}/delete-item/${encodeURIComponent(itemName)}`, {
+      const response = await fetch(`http://192.168.1.9:8002/shopping-list/${userId}/delete-item/${encodeURIComponent(itemName)}`, {
         method: "DELETE",
         headers: new Headers({
           "Authorization": `Bearer ${userToken}`, 
@@ -428,9 +428,23 @@ export default function Chat() {
             </View>
           </View>
         </Modal>
-        {/* Add RoutePlanner Below */}
         {storeAddresses.length > 0 && (
-          <RoutePlanner origin={origin} destination={destination} waypoints={waypoints} />
+          <TouchableOpacity 
+            onPress={() => {
+              if (storeAddresses.length > 1) {
+                computeOptimizedRoute(
+                  origin,  // First store as origin
+                  destination,  // Last store as destination
+                  waypoints  // Middle stores as waypoints
+                );
+              } else {
+                Alert.alert("Error", "Not enough stores to generate a route.");
+              }
+            }} 
+            style={styles.routeButton}
+          >
+            <Text style={styles.routeButtonText}>Show Route</Text>
+          </TouchableOpacity>
         )}
       </KeyboardAvoidingView>
     </SafeAreaView>

@@ -155,7 +155,6 @@ export default function RootLayout() {
       <Tab.Screen name="Talk" component={PushToTalk} />
       <Tab.Screen name="Profile" component={Profile}/>
       <Tab.Screen name="About" component={About} />
-      <Tab.Screen name="Route" component={Route} />
 
     </Tab.Navigator>
   );

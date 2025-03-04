@@ -14,34 +14,11 @@ import { MaterialIcons } from '@expo/vector-icons';
 
 const API_KEY = 'AIzaSyBCBJGPUsnUMWOi35liRxHG3gi7zswtcKs';
 
-interface RoutePlannerProps {
-  origin: string;
-  destination: string;
-  waypoints: string[];
-}
-
-const RoutePlanner = ({ origin, destination, waypoints }: RoutePlannerProps) => {
-  const computeOptimizedRoute = async () => {
-    if (!origin.trim() || !destination.trim()) {
-      Alert.alert('Error', 'Please enter both origin and destination addresses.');
-      return;
-    }
-
-  // const addWaypoint = () => {
-  //   setWaypoints([...waypoints, ""]);
-  // };
-
-  // const removeWaypoint = (index: number) => {
-  //   const newWaypoints = waypoints.filter((_, i) => i !== index);
-  //   setWaypoints(newWaypoints);
-  // };
-
-  // const updateWaypoint = (text: string, index: number) => {
-  //   const newWaypoints = [...waypoints];
-  //   newWaypoints[index] = text;
-  //   setWaypoints(newWaypoints);
-  // };
-  
+export const computeOptimizedRoute = async (origin: string, destination: string, waypoints: string[]) => {
+  if (!origin.trim() || !destination.trim()) {
+    Alert.alert('Error', 'Please enter both origin and destination addresses.');
+    return;
+  }
 
   const storeAddresses = [origin, ...waypoints.filter(wp => wp.trim()), destination];
 
@@ -79,7 +56,7 @@ const RoutePlanner = ({ origin, destination, waypoints }: RoutePlannerProps) => 
 
     const route = data.routes[0];
     const optimizedIndex = route.optimizedIntermediateWaypointIndex;
-    
+
     if (!optimizedIndex || waypoints.length === 0) {
       openMapsLink(storeAddresses);
       return;
@@ -95,192 +72,27 @@ const RoutePlanner = ({ origin, destination, waypoints }: RoutePlannerProps) => 
     console.error('Error fetching optimized route:', error);
     Alert.alert('Error', 'Failed to fetch optimized route.');
   }
-  };
-
-  const openMapsLink = (addresses: string[]) => {
-    if (addresses.length < 2) {
-      Alert.alert("Error", "Not enough addresses to form a route.");
-      return;
-    }
-
-    const encodedAddresses = addresses.map(encodeURIComponent);
-    const encodedOrigin = encodedAddresses[0];
-    const encodedDestination = encodedAddresses[encodedAddresses.length - 1];
-    const encodedWaypoints = encodedAddresses.slice(1, -1).join('|');
-
-    let url = `https://www.google.com/maps/dir/?api=1&origin=${encodedOrigin}&destination=${encodedDestination}`;
-    if (encodedWaypoints) {
-      url += `&waypoints=${encodedWaypoints}`;
-    }
-    url += `&travelmode=driving`;
-
-    Linking.openURL(url);
-  };
-
-  return null;
 };
 
-export default RoutePlanner;
+const openMapsLink = (addresses: string[]) => {
+  if (addresses.length < 2) {
+    Alert.alert("Error", "Not enough addresses to form a route.");
+    return;
+  }
 
-//   return (
-//     <ScrollView style={styles.container}>
-//       <View style={styles.header}>
-//         <Text style={styles.title}>Route Planner</Text>
-//         <Text style={styles.subtitle}>Optimize your shopping route</Text>
-//       </View>
+  const encodedAddresses = addresses.map(encodeURIComponent);
+  const encodedOrigin = encodedAddresses[0];
+  const encodedDestination = encodedAddresses[encodedAddresses.length - 1];
+  const encodedWaypoints = encodedAddresses.slice(1, -1).join('|');
 
-//       <View style={styles.inputSection}>
-//         <View style={styles.inputGroup}>
-//           <View style={styles.labelContainer}>
-//             <MaterialIcons name="location-on" size={20} color="#4CAF50" />
-//             <Text style={styles.label}>Starting Point</Text>
-//           </View>
-//           <TextInput
-//             style={styles.input}
-//             value={origin}
-//             onChangeText={setOrigin}
-//             placeholder="Enter starting address..."
-//           />
-//         </View>
+  let url = `https://www.google.com/maps/dir/?api=1&origin=${encodedOrigin}&destination=${encodedDestination}`;
+  if (encodedWaypoints) {
+    url += `&waypoints=${encodedWaypoints}`;
+  }
+  url += `&travelmode=driving`;
 
-//         {waypoints.map((waypoint, index) => (
-//           <View key={index} style={styles.inputGroup}>
-//             <View style={styles.labelContainer}>
-//               <MaterialIcons name="add-location" size={20} color="#4CAF50" />
-//               <Text style={styles.label}>Stop {index + 1}</Text>
-//               <TouchableOpacity 
-//                 onPress={() => removeWaypoint(index)}
-//                 style={styles.removeButton}
-//               >
-//                 <MaterialIcons name="remove-circle-outline" size={20} color="#ff6b6b" />
-//               </TouchableOpacity>
-//             </View>
-//             <TextInput
-//               style={styles.input}
-//               value={waypoint}
-//               onChangeText={(text) => updateWaypoint(text, index)}
-//               placeholder="Enter stop address..."
-//             />
-//           </View>
-//         ))}
-
-//         <TouchableOpacity style={styles.addButton} onPress={addWaypoint}>
-//           <MaterialIcons name="add-circle-outline" size={20} color="#4CAF50" />
-//           <Text style={styles.addButtonText}>Add Another Stop</Text>
-//         </TouchableOpacity>
-
-//         <View style={styles.inputGroup}>
-//           <View style={styles.labelContainer}>
-//             <MaterialIcons name="location-on" size={20} color="#4CAF50" />
-//             <Text style={styles.label}>Final Destination</Text>
-//           </View>
-//           <TextInput
-//             style={styles.input}
-//             value={destination}
-//             onChangeText={setDestination}
-//             placeholder="Enter destination address..."
-//           />
-//         </View>
-//       </View>
-
-//       <TouchableOpacity 
-//         style={styles.computeButton} 
-//         onPress={computeOptimizedRoute}
-//       >
-//         <MaterialIcons name="map" size={24} color="#fff" />
-//         <Text style={styles.computeButtonText}>Optimize & Open in Maps</Text>
-//       </TouchableOpacity>
-//     </ScrollView>
-//   );
-// }
-
-// const styles = StyleSheet.create({
-//   container: {
-//     flex: 1,
-//     backgroundColor: '#fff',
-//   },
-//   header: {
-//     padding: 24,
-//     backgroundColor: '#f8f9fa',
-//     borderBottomWidth: 1,
-//     borderBottomColor: '#e9ecef',
-//   },
-//   title: {
-//     fontSize: 28,
-//     fontWeight: 'bold',
-//     color: '#2d3436',
-//     marginBottom: 8,
-//   },
-//   subtitle: {
-//     fontSize: 16,
-//     color: '#636e72',
-//   },
-//   inputSection: {
-//     padding: 20,
-//   },
-//   inputGroup: {
-//     marginBottom: 20,
-//   },
-//   labelContainer: {
-//     flexDirection: 'row',
-//     alignItems: 'center',
-//     marginBottom: 8,
-//   },
-//   label: {
-//     fontSize: 16,
-//     fontWeight: '600',
-//     color: '#2d3436',
-//     marginLeft: 8,
-//     flex: 1,
-//   },
-//   input: {
-//     borderWidth: 1,
-//     borderColor: '#e9ecef',
-//     borderRadius: 12,
-//     padding: 12,
-//     fontSize: 16,
-//     backgroundColor: '#f8f9fa',
-//   },
-//   addButton: {
-//     flexDirection: 'row',
-//     alignItems: 'center',
-//     padding: 12,
-//     marginBottom: 20,
-//     justifyContent: 'center',
-//   },
-//   addButtonText: {
-//     color: '#4CAF50',
-//     fontSize: 16,
-//     fontWeight: '600',
-//     marginLeft: 8,
-//   },
-//   removeButton: {
-//     padding: 4,
-//   },
-//   computeButton: {
-//     backgroundColor: '#4CAF50',
-//     flexDirection: 'row',
-//     alignItems: 'center',
-//     justifyContent: 'center',
-//     padding: 16,
-//     borderRadius: 12,
-//     margin: 20,
-//     shadowColor: '#000',
-//     shadowOffset: {
-//       width: 0,
-//       height: 2,
-//     },
-//     shadowOpacity: 0.1,
-//     shadowRadius: 4,
-//     elevation: 3,
-//   },
-//   computeButtonText: {
-//     color: '#fff',
-//     fontSize: 18,
-//     fontWeight: '600',
-//     marginLeft: 8,
-//   },
-// });
+  Linking.openURL(url);
+};
 
 
 
