@@ -14,7 +14,7 @@ export default function Chat() {
   const [origin, setOrigin] = useState<string>("");
   const [destination, setDestination] = useState<string>("");
   const [waypoints, setWaypoints] = useState<string[]>([]);
-
+  const [showGenerateButton, setShowGenerateButton] = useState(false);
 
   const [showGenerateButton, setShowGenerateButton] = useState(false);
   const scrollViewRef = useRef<ScrollView | null>(null);
