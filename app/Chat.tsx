@@ -24,6 +24,8 @@ interface ShoppingListResponse {
   store_recommendations: StoreRecommendations;
 }
 
+const default_coordinates = "32.8801,-117.2340"; // Latitude, Longitude of UCSD
+
 export default function Chat() {
   const [messages, setMessages] = useState([{ sender: "Bot", text: "Hi! How can I help you today?" }]);
   const [input, setInput] = useState("");
@@ -44,6 +46,7 @@ export default function Chat() {
   const [userToken, setUserToken] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
   const scrollViewRef = useRef<ScrollView | null>(null);
+
 
   useEffect(() => {
     const setupUser = async () => {
@@ -82,7 +85,10 @@ export default function Chat() {
       const userLocation = await fetchUserLocation();
       if (!userLocation) return;
   
-      const userCoordinates = `${userLocation.latitude},${userLocation.longitude}`;
+      const userCoordinates = userLocation
+      ? `${userLocation.latitude},${userLocation.longitude}`
+      : default_coordinates; 
+
       const extractedAddresses = shoppingList?.store_recommendations?.stores?.map(store => store.address) || [];
   
       setStoreAddresses(extractedAddresses);

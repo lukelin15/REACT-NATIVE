@@ -10,15 +10,20 @@ import {
   Linking
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
+import { deleteAllPersistentCacheIndexes } from 'firebase/firestore';
 
 
 const API_KEY = 'AIzaSyBCBJGPUsnUMWOi35liRxHG3gi7zswtcKs';
+
+const default_coordinates = "32.8801,-117.2340";
 
 export const computeOptimizedRoute = async (origin: string, destination: string, waypoints: string[]) => {
   if (!origin.trim() || !destination.trim()) {
     Alert.alert('Error', 'Please enter both origin and destination addresses.');
     return;
   }
+
+  const finalOrigin = origin?.trim() ? origin : default_coordinates;
 
   const storeAddresses = [origin, ...waypoints.filter(wp => wp.trim()), destination];
 
@@ -28,7 +33,7 @@ export const computeOptimizedRoute = async (origin: string, destination: string,
   const requestBody = {
     origin: isOriginCoordinates
       ? { location: { latLng: { latitude: parseFloat(origin.split(',')[0]), longitude: parseFloat(origin.split(',')[1]) } } }
-      : { address: origin },  
+      : { address: finalOrigin },  
 
     destination: isDestinationCoordinates
       ? { location: { latLng: { latitude: parseFloat(destination.split(',')[0]), longitude: parseFloat(destination.split(',')[1]) } } }
