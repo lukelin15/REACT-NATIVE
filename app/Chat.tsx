@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert, ActivityIndicator, Modal, KeyboardAvoidingView, Platform, SafeAreaView, Keyboard, Animated } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert, ActivityIndicator, Modal, KeyboardAvoidingView, Platform, SafeAreaView, Keyboard, Animated, Linking } from 'react-native';
 import { auth, db } from '@/lib/firebase';
 import { doc, getDoc } from 'firebase/firestore';
 import { computeOptimizedRoute } from './Route';
@@ -47,6 +47,8 @@ export default function Chat() {
   const [userId, setUserId] = useState<string | null>(null);
   const scrollViewRef = useRef<ScrollView | null>(null);
 
+  const BACKEND_URL = "http://localhost:8002";
+
 
   useEffect(() => {
     const setupUser = async () => {
@@ -54,7 +56,7 @@ export default function Chat() {
       if (user) {
         const token = await user.getIdToken();
         setUserToken(token);
-        setUserId('Y84O1MLwhMRTUISOeKHHJucdCBq2');
+        setUserId(user.uid);
       }
     };
     setupUser();
@@ -80,28 +82,47 @@ export default function Chat() {
 
   useEffect(() => {
     const updateRouteWithUserLocation = async () => {
-      if (!shoppingList) return; // Ensure shopping list exists
+      console.log("updateRouteWithUserLocation called");
+      if (!shoppingList) {
+        console.log("No shopping list available");
+        return;
+      }
   
       const userLocation = await fetchUserLocation();
-      if (!userLocation) return;
+      console.log("User location:", userLocation);
+      
+      if (!userLocation) {
+        console.log("No user location available");
+        return;
+      }
   
       const userCoordinates = userLocation
-      ? `${userLocation.latitude},${userLocation.longitude}`
-      : default_coordinates; 
+        ? `${userLocation.latitude},${userLocation.longitude}`
+        : default_coordinates; 
+
+      console.log("User coordinates:", userCoordinates);
 
       const extractedAddresses = shoppingList?.store_recommendations?.stores?.map(store => store.address) || [];
+      console.log("Extracted addresses:", extractedAddresses);
   
       setStoreAddresses(extractedAddresses);
   
       if (extractedAddresses.length > 0) {
-        setOrigin(userCoordinates); // Use user location as the origin
-        setDestination(extractedAddresses[extractedAddresses.length - 1]); // Last store as destination
-        setWaypoints(extractedAddresses.slice(0, -1)); // Middle stores as waypoints
+        setOrigin(userCoordinates);
+        setDestination(extractedAddresses[extractedAddresses.length - 1]);
+        setWaypoints(extractedAddresses.slice(0, -1));
+        console.log("Route data set:", {
+          origin: userCoordinates,
+          destination: extractedAddresses[extractedAddresses.length - 1],
+          waypoints: extractedAddresses.slice(0, -1)
+        });
+      } else {
+        console.log("No addresses extracted from shopping list");
       }
     };
   
     updateRouteWithUserLocation();
-  }, [shoppingList]); // Runs when `shoppingList` updates     
+  }, [shoppingList]);
 
   useEffect(() => {
     if (isTyping) {
@@ -171,7 +192,7 @@ export default function Chat() {
         return "You need to sign in first.";
       }
 
-      const response = await fetch("http://192.168.1.9:8002/chat", {
+      const response = await fetch(`${BACKEND_URL}/chat`, {
         method: "POST",
         headers: new Headers({
           "Authorization": `Bearer ${userToken}`, 
@@ -218,7 +239,7 @@ export default function Chat() {
         return;
       }
 
-      const response = await fetch(`http://192.168.1.9:8002/generate-shopping-list/${userId}`, {
+      const response = await fetch(`${BACKEND_URL}/generate-shopping-list/${userId}`, {
         method: "GET",
         headers: new Headers({
           "Authorization": `Bearer ${userToken}`, 
@@ -273,7 +294,7 @@ export default function Chat() {
         return;
       }
 
-      const response = await fetch(`http://192.168.1.9:8002/shopping-list/${userId}/delete-item/${encodeURIComponent(itemName)}`, {
+      const response = await fetch(`${BACKEND_URL}/shopping-list/${userId}/delete-item/${encodeURIComponent(itemName)}`, {
         method: "DELETE",
         headers: new Headers({
           "Authorization": `Bearer ${userToken}`, 
@@ -300,6 +321,48 @@ export default function Chat() {
     }
   };
 
+  const createCheckoutSession = async () => {
+    try {
+      if (!shoppingList?.items) {
+        Alert.alert("Error", "No items in shopping list");
+        return;
+      }
+
+      const items = shoppingList.items.map(item => ({
+        name: item.name,
+        price: item.price,
+        quantity: 1
+      }));
+
+      const response = await fetch(`${BACKEND_URL}/create-checkout-session`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ items }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to create checkout session');
+      }
+
+      const data = await response.json();
+      
+      // Open the Stripe checkout URL in the device's browser
+      await Linking.openURL(data.url);
+      
+      // Close the modal after initiating checkout
+      setModalVisible(false);
+    } catch (error) {
+      console.error('Checkout error:', error);
+      Alert.alert('Error', 'Failed to initiate checkout. Please try again.');
+    }
+  };
+
+  console.log("Store addresses:", storeAddresses);
+  console.log("Origin:", origin);
+  console.log("Destination:", destination);
+  console.log("Waypoints:", waypoints);
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -429,24 +492,37 @@ export default function Chat() {
                     </TouchableOpacity>
                   ) : (
                     <>
-                      {storeAddresses.length > 0 && (
+                      <TouchableOpacity 
+                        onPress={createCheckoutSession}
+                        style={[styles.checkoutButton, styles.flexButton]}
+                      >
+                        <Text style={styles.checkoutButtonText}>Checkout</Text>
+                      </TouchableOpacity>
+
+                      {storeAddresses && storeAddresses.length > 0 && (
                         <TouchableOpacity 
-                          onPress={() => setModalVisible(false)}
+                          onPress={() => {
+                            console.log("Route button pressed");
+                            console.log("Current route data:", {
+                              origin,
+                              destination,
+                              waypoints
+                            });
+                            if (storeAddresses.length > 1) {
+                              computeOptimizedRoute(
+                                origin,
+                                destination,
+                                waypoints
+                              );
+                            } else {
+                              Alert.alert("Error", "Not enough stores to generate a route.");
+                            }
+                          }}
                           style={[styles.routeButton, styles.flexButton]}
                         >
                           <Text style={styles.routeButtonText}>Route</Text>
                         </TouchableOpacity>
                       )}
-
-                      <TouchableOpacity 
-                        onPress={() => {
-                          Alert.alert("Success", "Your order has been placed!");
-                          setModalVisible(false);
-                        }} 
-                        style={[styles.checkoutButton, styles.flexButton]}
-                      >
-                        <Text style={styles.checkoutButtonText}>Checkout</Text>
-                      </TouchableOpacity>
 
                       <TouchableOpacity 
                         onPress={() => setModalVisible(false)} 
@@ -752,4 +828,3 @@ const styles = StyleSheet.create({
     marginHorizontal: 2,
   },
 });
-
