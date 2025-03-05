@@ -22,12 +22,25 @@ export const computeOptimizedRoute = async (origin: string, destination: string,
 
   const storeAddresses = [origin, ...waypoints.filter(wp => wp.trim()), destination];
 
+  const isOriginCoordinates = /^-?\d+(\.\d+)?,-?\d+(\.\d+)?$/.test(origin);
+  const isDestinationCoordinates = /^-?\d+(\.\d+)?,-?\d+(\.\d+)?$/.test(destination);
+
   const requestBody = {
-    origin: { address: origin },
-    destination: { address: destination },
-    intermediates: waypoints
-      .filter(wp => wp.trim())
-      .map(address => ({ address })),
+    origin: isOriginCoordinates
+      ? { location: { latLng: { latitude: parseFloat(origin.split(',')[0]), longitude: parseFloat(origin.split(',')[1]) } } }
+      : { address: origin },  
+
+    destination: isDestinationCoordinates
+      ? { location: { latLng: { latitude: parseFloat(destination.split(',')[0]), longitude: parseFloat(destination.split(',')[1]) } } }
+      : { address: destination },
+
+    intermediates: waypoints.map(address => {
+      const isCoordinate = /^-?\d+(\.\d+)?,-?\d+(\.\d+)?$/.test(address);
+      return isCoordinate
+        ? { location: { latLng: { latitude: parseFloat(address.split(',')[0]), longitude: parseFloat(address.split(',')[1]) } } }
+        : { address };
+    }),
+
     travelMode: "DRIVE",
     optimizeWaypointOrder: true,
   };
@@ -44,6 +57,8 @@ export const computeOptimizedRoute = async (origin: string, destination: string,
     });
 
     if (!response.ok) {
+      const errorText = await response.text();
+      console.error("Google API Error Response:", errorText);
       throw new Error(`Request failed with status ${response.status}`);
     }
 

@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert, ActivityIndicator, Modal, KeyboardAvoidingView, Platform, SafeAreaView, Keyboard, Animated } from 'react-native';
-import { auth } from '@/lib/firebase';
+import { auth, db } from '@/lib/firebase';
+import { doc, getDoc } from 'firebase/firestore';
 import { computeOptimizedRoute } from './Route';
 
 interface Store {
@@ -55,6 +56,46 @@ export default function Chat() {
     };
     setupUser();
   }, []);
+
+  const fetchUserLocation = async () => {
+    const user = auth.currentUser;
+    if (!user) return null;
+  
+    try {
+      const preferencesDoc = doc(db, 'users', user.uid, 'AllAboutUser', 'preferences');
+      const docSnap = await getDoc(preferencesDoc);
+  
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        return data.location; // Returns { latitude, longitude } if available
+      }
+    } catch (error) {
+      console.error("Error fetching user location:", error);
+    }
+    return null;
+  };
+
+  useEffect(() => {
+    const updateRouteWithUserLocation = async () => {
+      if (!shoppingList) return; // Ensure shopping list exists
+  
+      const userLocation = await fetchUserLocation();
+      if (!userLocation) return;
+  
+      const userCoordinates = `${userLocation.latitude},${userLocation.longitude}`;
+      const extractedAddresses = shoppingList?.store_recommendations?.stores?.map(store => store.address) || [];
+  
+      setStoreAddresses(extractedAddresses);
+  
+      if (extractedAddresses.length > 0) {
+        setOrigin(userCoordinates); // Use user location as the origin
+        setDestination(extractedAddresses[extractedAddresses.length - 1]); // Last store as destination
+        setWaypoints(extractedAddresses.slice(0, -1)); // Middle stores as waypoints
+      }
+    };
+  
+    updateRouteWithUserLocation();
+  }, [shoppingList]); // Runs when `shoppingList` updates     
 
   useEffect(() => {
     if (isTyping) {
@@ -209,21 +250,7 @@ export default function Chat() {
         throw new Error("Invalid response format from server");
       }
 
-      setShoppingList(data);
-
-      if (data.store_recommendations.stores) {
-        const extractedAddresses = data.store_recommendations.stores.map(store => store.address);
-        console.log("Extracted addresses:", extractedAddresses);
-        setStoreAddresses(extractedAddresses);
-  
-        if (extractedAddresses.length > 1) {
-          setOrigin(extractedAddresses[0]); // First store
-          setDestination(extractedAddresses[extractedAddresses.length - 1]); // Last store
-          setWaypoints(extractedAddresses.slice(1, -1)); // Middle stores as waypoints
-        }
-      } else {
-        setStoreAddresses([]);
-      }
+      setShoppingList(data); 
 
     } catch (error) {
       console.error("Error generating shopping list:", error);
