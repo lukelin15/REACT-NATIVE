@@ -13,7 +13,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { deleteAllPersistentCacheIndexes } from 'firebase/firestore';
 
 
-const API_KEY = 'AIzaSyBCBJGPUsnUMWOi35liRxHG3gi7zswtcKs';
+const API_KEY = process.env.REACT_APP_GOOGLE_MAPS_API_KEY;
 
 const default_coordinates = "32.8801,-117.2340";
 
