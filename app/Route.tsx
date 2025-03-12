@@ -55,9 +55,9 @@ export const computeOptimizedRoute = async (origin: string, destination: string,
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'X-Goog-Api-Key': API_KEY,
+        'X-Goog-Api-Key': API_KEY || '',
         'X-Goog-FieldMask': 'routes.optimizedIntermediateWaypointIndex'
-      },
+      } as HeadersInit,
       body: JSON.stringify(requestBody),
     });
 
@@ -113,6 +113,13 @@ const openMapsLink = (addresses: string[]) => {
 
   Linking.openURL(url);
 };
+
+const Route = () => {
+  // Route component implementation
+  return null;
+};
+
+export default Route;
 
 
 

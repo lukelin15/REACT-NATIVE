@@ -20,7 +20,7 @@ export default function About() {
           <Text style={styles.sectionTitle}>Development Team</Text>
           <View style={styles.teamContainer}>
             {[
-              { name: 'Luke', role: 'UI/UX Designer' },
+              { name: 'Luke', role: 'Full Stack Developer' },
               { name: 'Matteo', role: 'Backend Developer' },
               { name: 'Yi', role: 'Backend Developer' },
               { name: 'Jessica', role: 'Backend Developer' }

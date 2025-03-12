@@ -20,7 +20,7 @@ export default function ItemsYouMightNeed({ navigation }: ItemsYouMightNeedProps
         { id: 3, name: "Rice", image: require("../assets/images/Rice.jpg") },
         { id: 4, name: "Orange", image: require("../assets/images/Orange.jpg") },
         { id: 5, name: "Potato", image: require("../assets/images/Potato.jpg") },
-        { id: 6, name: "Spinach", image: require("../assets/images/Spinach.jpg") },
+        // { id: 6, name: "Spinach", image: require("../assets/images/Spinach.jpg") },
         { id: 7, name: "Chicken", image: require("../assets/images/Chicken.jpg") },
         { id: 8, name: "Beef", image: require("../assets/images/Beef.jpg") },
         { id: 9, name: "Milk", image: require("../assets/images/Milk.jpg") },
