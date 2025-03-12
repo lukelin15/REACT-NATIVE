@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -7,31 +7,79 @@ import {
   Image,
   TouchableOpacity,
   SafeAreaView,
-  Alert
+  Alert,
+  ActivityIndicator
 } from 'react-native';
 import { useCart, CartItem } from '../lib/CartContext';
 import { AntDesign } from '@expo/vector-icons';
 import CheckoutModal from '../components/CheckoutModal';
 
-const Cart = () => {
-  const { items, removeItem, updateQuantity, getTotalPrice } = useCart();
-  const [isCheckoutModalVisible, setIsCheckoutModalVisible] = useState(false);
+type ImageSearchResponse = {
+  query: string;
+  imageUrl: string;
+};
 
-  const handleCheckout = () => {
-    if (items.length === 0) {
-      Alert.alert('Cart is empty', 'Add some items to your cart before checking out.');
-      return;
+const fetchItemImage = async (itemName: string): Promise<string | null> => {
+  try {
+    const response = await fetch(
+      'http://localhost:8002/api/search-image',
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ query: itemName }),
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error('Network response was not ok');
     }
-    
-    // Show the checkout modal
-    setIsCheckoutModalVisible(true);
-  };
 
-  const renderItem = ({ item }: { item: CartItem }) => (
+    const data: ImageSearchResponse = await response.json();
+    return data.imageUrl;
+  } catch (error) {
+    console.error('Error fetching image:', error);
+    return null;
+  }
+};
+
+// Create a new CartItemComponent
+const CartItemComponent = ({ 
+  item, 
+  removeItem, 
+  updateQuantity 
+}: { 
+  item: CartItem;
+  removeItem: (id: string) => void;
+  updateQuantity: (id: string, quantity: number) => void;
+}) => {
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const loadImage = async () => {
+      setIsLoading(true);
+      const url = await fetchItemImage(item.name);
+      setImageUrl(url);
+      setIsLoading(false);
+    };
+    loadImage();
+  }, [item.name]);
+
+  return (
     <View style={styles.cartItem}>
       <View style={styles.itemImageContainer}>
-        {item.image ? (
-          <Image source={item.image} style={styles.itemImage} />
+        {isLoading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="small" color="#4CAF50" />
+          </View>
+        ) : imageUrl ? (
+          <Image
+            source={{ uri: imageUrl }}
+            style={styles.itemImage}
+            onError={() => setImageUrl(null)}
+          />
         ) : (
           <View style={styles.placeholderImage}>
             <AntDesign name="shoppingcart" size={24} color="#ccc" />
@@ -69,6 +117,30 @@ const Cart = () => {
         <AntDesign name="delete" size={20} color="#FF4B4B" />
       </TouchableOpacity>
     </View>
+  );
+};
+
+// Modify the Cart component's renderItem
+const Cart = () => {
+  const { items, removeItem, updateQuantity, getTotalPrice } = useCart();
+  const [isCheckoutModalVisible, setIsCheckoutModalVisible] = useState(false);
+
+  const handleCheckout = () => {
+    if (items.length === 0) {
+      Alert.alert('Cart is empty', 'Add some items to your cart before checking out.');
+      return;
+    }
+    
+    // Show the checkout modal
+    setIsCheckoutModalVisible(true);
+  };
+
+  const renderItem = ({ item }: { item: CartItem }) => (
+    <CartItemComponent 
+      item={item}
+      removeItem={removeItem}
+      updateQuantity={updateQuantity}
+    />
   );
 
   return (
@@ -180,6 +252,14 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
     resizeMode: 'cover',
+    backgroundColor: '#f5f5f5',
+  },
+  loadingContainer: {
+    width: '100%',
+    height: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#f5f5f5',
   },
   placeholderImage: {
     width: '100%',
@@ -274,4 +354,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default Cart; 
+export default Cart;
