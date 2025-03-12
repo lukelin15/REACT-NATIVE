@@ -63,12 +63,20 @@ export default function SignUp({ onSignUp }: SignUpProps) {
         lastName,
         email,
         firstSignUp: new Date(),
-        onboardingCompleted: false // Add this flag
+        onboardingCompleted: false
       };
   
+      // Create document in main users collection
+      await setDoc(doc(db, 'users', user.uid), {
+        email: email,
+        createdAt: new Date()
+      });
+
+      // Create document in AllAboutUser subcollection
       await setDoc(doc(db, 'users', user.uid, 'AllAboutUser', 'profile'), dataToSave);
+      
       console.log('User signed up successfully!');
-      navigation.replace('Onboarding'); // Use replace instead of navigate
+      navigation.replace('Onboarding');
     } catch (error: any) {
       setError(error.message);
     }
