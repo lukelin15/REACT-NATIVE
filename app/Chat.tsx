@@ -7,11 +7,10 @@ import { computeOptimizedRoute } from './Route';
 interface Store {
   name: string;
   address: string;
-  available_items: string[];
 }
 
 interface StoreRecommendations {
-  stores: Store[];
+  stores?: Store[]; // Make stores optional
 }
 
 interface ShoppingItem {
@@ -102,6 +101,7 @@ export default function Chat() {
 
       console.log("User coordinates:", userCoordinates);
 
+      // Add null check for store_recommendations.stores
       const extractedAddresses = shoppingList?.store_recommendations?.stores?.map(store => store.address) || [];
       console.log("Extracted addresses:", extractedAddresses);
   
@@ -470,12 +470,12 @@ export default function Chat() {
 
                     <View style={styles.receiptSection}>
                       <Text style={styles.receiptSectionTitle}>Available At</Text>
-                      {shoppingList?.store_recommendations.stores.map((store, index) => (
+                      {shoppingList?.store_recommendations?.stores?.map((store, index) => (
                         <View key={index} style={styles.storeItem}>
                           <Text style={styles.storeName}>{store.name}</Text>
                           <Text style={styles.storeAddress}>{store.address}</Text>
                         </View>
-                      ))}
+                      ))} || <Text>No store recommendations available</Text>
                     </View>
                   </>
                 )}
