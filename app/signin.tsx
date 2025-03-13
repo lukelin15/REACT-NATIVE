@@ -7,7 +7,8 @@ import {
   TouchableOpacity,
   Animated,
   KeyboardAvoidingView,
-  Platform
+  Platform,
+  ActivityIndicator
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -31,6 +32,7 @@ export default function SignIn({ onLogin }: SignInProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string>('');
+  const [isGenerating, setIsGenerating] = useState(false);
   const navigation = useNavigation<SignInScreenNavigationProp>();
 
   // Add animation value for fade-in effect
@@ -47,11 +49,35 @@ export default function SignIn({ onLogin }: SignInProps) {
   const handleSignIn = async () => {
     try {
       await signInWithEmailAndPassword(auth, email, password);
+
+      // Show loading
+      setIsGenerating(true);
+      try {
+        const uid = auth.currentUser?.uid;
+        if (uid) {
+          await fetch(`http://localhost:8003/api/generate-menu/${uid}`, { method: 'POST' });
+          await fetch(`http://localhost:8003/api/generate-categories/${uid}`, { method: 'POST' });
+        }
+      } catch (genError) {
+        console.error('Error generating data:', genError);
+      } finally {
+        setIsGenerating(false);
+      }
+
       onLogin();
     } catch (error: any) {
       setError('Failed to log in. Please check your credentials and try again.');
     }
   };
+
+  if (isGenerating) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#4CAF50' }}>
+        <ActivityIndicator size="large" color="#fff" />
+        <Text style={{ color: '#fff', marginTop: 20 }}>Generating data...</Text>
+      </View>
+    );
+  }
 
   return (
     <KeyboardAvoidingView 

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, TextInput, ScrollView, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, TextInput, ScrollView, StyleSheet, ActivityIndicator } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { auth, db } from '@/lib/firebase';
 import { doc, setDoc } from 'firebase/firestore';
@@ -34,6 +34,8 @@ export default function Onboarding({ setIsLoggedIn }: OnboardingProps) {
   const [otherPreference, setOtherPreference] = useState('');
   const [otherAllergy, setOtherAllergy] = useState('');
   const [otherCuisine, setOtherCuisine] = useState('');
+
+  const [isGenerating, setIsGenerating] = useState(false);
 
   const preferences = ['Vegan', 'Vegetarian', 'Pescatarian', 'Gluten-Free', 'Lactose-Free', 'Low-Carb','Low-Sodium'];
   const allergies = ['Peanuts', 'Tree Nuts', 'Milk', 'Eggs', 'Soy', 'Fish', 'Shellfish', 'Wheat'];
@@ -86,6 +88,17 @@ export default function Onboarding({ setIsLoggedIn }: OnboardingProps) {
       const profileDoc = doc(db, 'users', user.uid, 'AllAboutUser', 'profile');
       await setDoc(profileDoc, { onboardingCompleted: true }, { merge: true });
 
+      // Show loading while generating data
+      setIsGenerating(true);
+      try {
+        await fetch(`http://localhost:8003/api/generate-menu/${user.uid}`, { method: 'POST' });
+        await fetch(`http://localhost:8003/api/generate-categories/${user.uid}`, { method: 'POST' });
+      } catch (genError) {
+        console.error('Error generating data:', genError);
+      } finally {
+        setIsGenerating(false);
+      }
+
       setIsLoggedIn(true);
       console.log('Available routes:', navigation.getState().routes);
       navigation.replace('Index');
@@ -93,6 +106,15 @@ export default function Onboarding({ setIsLoggedIn }: OnboardingProps) {
       console.error('Error saving preferences:', error);
     }
   };
+
+  if (isGenerating) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#FFE5D9' }}>
+        <ActivityIndicator size="large" color="#4CAF50" />
+        <Text style={{ marginTop: 20, color: '#4CAF50' }}>Generating data...</Text>
+      </View>
+    );
+  }
 
   const renderProgressBar = () => {
     return (
