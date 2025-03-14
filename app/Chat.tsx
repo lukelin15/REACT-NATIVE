@@ -46,7 +46,7 @@ export default function Chat() {
   const [userId, setUserId] = useState<string | null>(null);
   const scrollViewRef = useRef<ScrollView | null>(null);
 
-  const BACKEND_URL = "http://localhost:8000";
+  const BACKEND_URL = "https://a5db-2601-646-8f80-1110-a86e-8467-db5-60d8.ngrok-free.app";
 
 
   useEffect(() => {
@@ -228,17 +228,20 @@ export default function Chat() {
 
   const generateShoppingList = async () => {
     try {
+      console.log('Starting generateShoppingList');
       setLoadingList(true);
       setModalVisible(true);
       setShowGenerateButton(false);
 
       if (!userId || !userToken) {
+        console.log('No userId or userToken available');
         Alert.alert("Authentication Error", "You must be logged in.");
         setLoadingList(false);
         setModalVisible(false);
         return;
       }
 
+      console.log('Fetching shopping list from backend...');
       const response = await fetch(`${BACKEND_URL}/generate-shopping-list/${userId}`, {
         method: "GET",
         headers: new Headers({
@@ -260,12 +263,13 @@ export default function Chat() {
 
       // Try to parse the response as JSON
       const responseText = await response.text();
-      console.log("Raw response:", responseText); // Debug log
+      console.log("Raw response:", responseText);
       
       let data: ShoppingListResponse;
       try {
+        console.log('Parsing response data...');
         data = JSON.parse(responseText) as ShoppingListResponse;
-        console.log("Parsed data:", JSON.stringify(data, null, 2));
+        console.log("Parsed shopping list data:", JSON.stringify(data, null, 2));
       } catch (parseError) {
         console.error("JSON parse error:", parseError);
         throw new Error("Invalid JSON response from server");
@@ -277,7 +281,9 @@ export default function Chat() {
         throw new Error("Invalid response format from server");
       }
 
-      setShoppingList(data); 
+      console.log('Setting shopping list state...');
+      setShoppingList(data);
+      console.log('Shopping list state updated successfully');
 
     } catch (error) {
       console.error("Error generating shopping list:", error);
@@ -451,32 +457,56 @@ export default function Chat() {
                   <ActivityIndicator size="large" color="#2E8B57" />
                 ) : (
                   <>
-                    <View style={styles.receiptSection}>
-                      <Text style={styles.receiptSectionTitle}>Items</Text>
-                      {shoppingList?.items.map((item, index) => (
-                        <View key={index} style={styles.receiptItem}>
-                          <Text style={styles.receiptItemName}>{item.name}</Text>
-                          <Text style={styles.receiptItemPrice}>${item.price.toFixed(2)}</Text>
-                        </View>
-                      ))}
-                      <View style={styles.receiptDivider} />
-                      <View style={styles.receiptTotal}>
-                        <Text style={styles.receiptTotalText}>Total</Text>
-                        <Text style={styles.receiptTotalAmount}>
-                          ${shoppingList?.items.reduce((sum, item) => sum + item.price, 0).toFixed(2)}
-                        </Text>
+                    {(() => {
+                      console.log('Rendering shopping list:', shoppingList);
+                      return null;
+                    })()}
+                    {!shoppingList ? (
+                      <View style={styles.errorContainer}>
+                        <Text style={styles.errorText}>No shopping list data available</Text>
                       </View>
-                    </View>
-
-                    <View style={styles.receiptSection}>
-                      <Text style={styles.receiptSectionTitle}>Available At</Text>
-                      {shoppingList?.store_recommendations?.stores?.map((store, index) => (
-                        <View key={index} style={styles.storeItem}>
-                          <Text style={styles.storeName}>{store.name}</Text>
-                          <Text style={styles.storeAddress}>{store.address}</Text>
+                    ) : (
+                      <>
+                        <View style={styles.receiptSection}>
+                          <Text style={styles.receiptSectionTitle}>Items</Text>
+                          {(!shoppingList.items || shoppingList.items.length === 0) ? (
+                            <Text style={styles.noDataText}>No items in shopping list</Text>
+                          ) : (
+                            shoppingList.items.map((item, index) => (
+                              <View key={index} style={styles.receiptItem}>
+                                <Text style={styles.receiptItemName}>{item.name}</Text>
+                                <Text style={styles.receiptItemPrice}>${item.price.toFixed(2)}</Text>
+                              </View>
+                            ))
+                          )}
+                          {shoppingList.items && shoppingList.items.length > 0 && (
+                            <>
+                              <View style={styles.receiptDivider} />
+                              <View style={styles.receiptTotal}>
+                                <Text style={styles.receiptTotalText}>Total</Text>
+                                <Text style={styles.receiptTotalAmount}>
+                                  ${shoppingList.items.reduce((sum, item) => sum + item.price, 0).toFixed(2)}
+                                </Text>
+                              </View>
+                            </>
+                          )}
                         </View>
-                      ))} || <Text>No store recommendations available</Text>
-                    </View>
+
+                        <View style={styles.receiptSection}>
+                          <Text style={styles.receiptSectionTitle}>Available At</Text>
+                          {(!shoppingList.store_recommendations?.stores || shoppingList.store_recommendations.stores.length === 0) ? (
+                            <Text style={styles.noDataText}>No store recommendations available</Text>
+                          ) : (
+                            shoppingList.store_recommendations.stores.map((store, index) => (
+                              <View key={index} style={styles.storeItem}>
+                                <Text style={styles.storeName}>{store.name}</Text>
+                                <Text style={styles.storeAddress}>{store.address}</Text>
+                              </View>
+                            ))
+                          )}
+                        </View>
+                      </>
+                    )}
                   </>
                 )}
               </ScrollView>
@@ -656,16 +686,19 @@ const styles = StyleSheet.create({
   },
   modalContainer: { 
     flex: 1, 
-    justifyContent: 'center', 
+    justifyContent: 'flex-start',
     alignItems: 'center', 
-    backgroundColor: "rgba(0,0,0,0.5)" 
+    backgroundColor: "rgba(0,0,0,0.5)",
+    paddingHorizontal: 20,
+    paddingTop: 60,
+    paddingBottom: 60,
   },
   modalContent: { 
     backgroundColor: "#fff", 
     padding: 20, 
     borderRadius: 10, 
-    width: '90%',
-    maxHeight: '80%',
+    width: '100%',
+    flex: 1,
     shadowColor: "#000",
     shadowOffset: {
       width: 0,
@@ -679,7 +712,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   modalScrollContent: {
-    paddingBottom: 20,
+    flexGrow: 1,
   },
   receiptHeader: {
     alignItems: 'center',
@@ -701,7 +734,9 @@ const styles = StyleSheet.create({
     marginVertical: 10,
   },
   receiptSection: {
-    marginBottom: 15,
+    marginBottom: 20,
+    width: '100%',
+    minHeight: 50,
   },
   receiptSectionTitle: {
     fontSize: 18,
@@ -826,5 +861,21 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     backgroundColor: '#2E8B57',
     marginHorizontal: 2,
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    minHeight: 200,
+  },
+  errorText: {
+    color: '#FF4C4C',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  noDataText: {
+    color: '#666',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
 });
