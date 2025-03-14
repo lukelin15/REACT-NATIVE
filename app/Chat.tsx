@@ -46,7 +46,7 @@ export default function Chat() {
   const [userId, setUserId] = useState<string | null>(null);
   const scrollViewRef = useRef<ScrollView | null>(null);
 
-  const BACKEND_URL = "http://localhost:8002";
+  const BACKEND_URL = "http://localhost:8000";
 
 
   useEffect(() => {

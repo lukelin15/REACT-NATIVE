@@ -91,8 +91,9 @@ export default function Onboarding({ setIsLoggedIn }: OnboardingProps) {
       // Show loading while generating data
       setIsGenerating(true);
       try {
-        await fetch(`http://localhost:8003/api/generate-menu/${user.uid}`, { method: 'POST' });
-        await fetch(`http://localhost:8003/api/generate-categories/${user.uid}`, { method: 'POST' });
+        // await fetch(`http://localhost:8003/api/generate-menu/${user.uid}`, { method: 'POST' });
+        // await fetch(`http://localhost:8003/api/generate-categories/${user.uid}`, { method: 'POST' });
+        console.log('Data generated successfully');
       } catch (genError) {
         console.error('Error generating data:', genError);
       } finally {

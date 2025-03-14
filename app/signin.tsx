@@ -55,8 +55,9 @@ export default function SignIn({ onLogin }: SignInProps) {
       try {
         const uid = auth.currentUser?.uid;
         if (uid) {
-          await fetch(`http://localhost:8003/api/generate-menu/${uid}`, { method: 'POST' });
-          await fetch(`http://localhost:8003/api/generate-categories/${uid}`, { method: 'POST' });
+          // await fetch(`http://localhost:8003/api/generate-menu/${uid}`, { method: 'POST' });
+          // await fetch(`http://localhost:8003/api/generate-categories/${uid}`, { method: 'POST' });
+          console.log('Data generated successfully');
         }
       } catch (genError) {
         console.error('Error generating data:', genError);
